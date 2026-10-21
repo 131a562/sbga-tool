@@ -1,0 +1,212 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SBGA TOOL</title>
+<meta name="description" content="maimai DX / CHUNITHM / オンゲキ 曲目资料：版本、定数、谱师、物量、容错">
+<meta name="theme-color" content="#e0457b">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/png" href="icons/favicon.png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="SBGA TOOL">
+<style>
+:root {
+  --bg: #f6f7fb; --panel: #ffffff; --panel2: #f0f2f7; --line: #dfe3ec;
+  --text: #1d2130; --sub: #646b80; --faint: #9aa0b2;
+  --accent: #e0457b; --accent-soft: #fde7ef;
+  --bas: #22a559; --adv: #e8901a; --exp: #e5374f; --mas: #9b3fd9; --remas: #c792f2;
+  --ult: #2b2b2b; --lun: #b8a200; --utage: #ff5fa2; --we: #3a3f52;
+  --ok: #1f9d6b; --warn: #c27a00; --bad: #d03a3a;
+  --shadow: 0 1px 2px rgba(20,24,40,.06), 0 2px 8px rgba(20,24,40,.05);
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #12141b; --panel: #1b1e28; --panel2: #232735; --line: #2e3344;
+    --text: #e8eaf2; --sub: #a3a9bd; --faint: #6c7288;
+    --accent-soft: #3a1f2b; --ult: #e6e6e6; --we: #c9cde0;
+    --shadow: none; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #12141b; --panel: #1b1e28; --panel2: #232735; --line: #2e3344;
+  --text: #e8eaf2; --sub: #a3a9bd; --faint: #6c7288;
+  --accent-soft: #3a1f2b; --ult: #e6e6e6; --we: #c9cde0;
+  --shadow: none; color-scheme: dark;
+}
+body[data-game="maimai"] { --accent: #e0457b; }
+body[data-game="chunithm"] { --accent: #d98a00; }
+body[data-game="ongeki"] { --accent: #7c5cf0; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) body[data-game="chunithm"] { --accent-soft: #3a2c10; } :root:not([data-theme="light"]) body[data-game="ongeki"] { --accent-soft: #2a2245; } }
+:root[data-theme="dark"] body[data-game="chunithm"] { --accent-soft: #3a2c10; }
+:root[data-theme="dark"] body[data-game="ongeki"] { --accent-soft: #2a2245; }
+body[data-game="chunithm"] { --accent-soft: #fdf0d6; }
+body[data-game="ongeki"] { --accent-soft: #ece6ff; }
+
+* { box-sizing: border-box; }
+html, body { margin: 0; }
+body { background: var(--bg); color: var(--text); font: 14px/1.5 system-ui, -apple-system, "Segoe UI", "Hiragino Sans", "Microsoft YaHei", "Yu Gothic UI", sans-serif; }
+a { color: var(--accent); }
+button, input, select { font: inherit; color: inherit; }
+.wrap { max-width: 1280px; margin: 0 auto; padding: 0 16px; }
+
+header { background: var(--panel); border-bottom: 1px solid var(--line); position: sticky; top: 0; z-index: 10; }
+header .wrap { display: flex; align-items: center; gap: 16px; height: 56px; }
+h1 { font-size: 17px; margin: 0; white-space: nowrap; }
+.tabs { display: flex; gap: 4px; overflow-x: auto; }
+.tab { border: 0; background: none; padding: 8px 14px; border-radius: 8px; cursor: pointer; color: var(--sub); font-weight: 600; white-space: nowrap; }
+.tab:hover { background: var(--panel2); }
+.tab.on { background: var(--accent-soft); color: var(--accent); }
+.hdr-right { margin-left: auto; display: flex; align-items: center; gap: 8px; color: var(--faint); font-size: 12px; }
+.icon-btn { border: 1px solid var(--line); background: var(--panel); border-radius: 8px; padding: 4px 9px; cursor: pointer; color: var(--sub); }
+
+.filters { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 14px; margin: 16px 0; box-shadow: var(--shadow); display: grid; gap: 12px; }
+.frow { display: flex; flex-wrap: wrap; gap: 10px 18px; align-items: center; }
+.flabel { color: var(--sub); font-size: 12px; font-weight: 600; min-width: 36px; }
+.fgroup { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.search { display: flex; flex: 1 1 360px; min-width: 0; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; background: var(--panel); }
+.search input { flex: 1; min-width: 0; border: 0; padding: 8px 10px; background: transparent; outline: none; }
+.search:focus-within { border-color: var(--accent); }
+.seg { display: inline-flex; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
+.seg button { border: 0; background: var(--panel); padding: 6px 10px; cursor: pointer; color: var(--sub); }
+.seg button + button { border-left: 1px solid var(--line); }
+.seg button.on { background: var(--accent); color: #fff; }
+.search .seg { border: 0; border-left: 1px solid var(--line); border-radius: 0; }
+input[type=number], select { border: 1px solid var(--line); border-radius: 8px; padding: 6px 8px; background: var(--panel); }
+input[type=number] { width: 76px; }
+.chk { display: inline-flex; align-items: center; gap: 4px; cursor: pointer; user-select: none; }
+.err { color: var(--bad); font-size: 12px; }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.chip { border: 1px solid var(--line); background: var(--panel); border-radius: 999px; padding: 3px 10px; cursor: pointer; font-size: 12px; color: var(--sub); }
+.chip.on { background: var(--accent); border-color: var(--accent); color: #fff; }
+.chip.ghost { border-style: dashed; }
+details.vers summary { cursor: pointer; color: var(--sub); font-size: 12px; font-weight: 600; }
+details.vers[open] summary { margin-bottom: 8px; }
+.count { color: var(--sub); margin: 0 0 10px; display: flex; gap: 12px; align-items: baseline; flex-wrap: wrap; }
+.count b { color: var(--text); font-size: 16px; }
+
+.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(290px, 1fr)); gap: 10px; }
+.card { display: flex; gap: 10px; background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 8px; cursor: pointer; text-decoration: none; color: inherit; box-shadow: var(--shadow); min-width: 0; }
+.card:hover { border-color: var(--accent); }
+.jk { width: 72px; height: 72px; border-radius: 6px; object-fit: cover; background: var(--panel2); flex: none; }
+.cbody { min-width: 0; flex: 1; display: flex; flex-direction: column; gap: 3px; }
+.ctitle { font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.cartist { color: var(--sub); font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.cmeta { display: flex; gap: 4px; flex-wrap: wrap; align-items: center; font-size: 11px; color: var(--faint); }
+.lvs { display: flex; gap: 4px; flex-wrap: wrap; margin-top: auto; }
+.lv { font-size: 11px; font-weight: 700; color: #fff; border-radius: 4px; padding: 0 6px; line-height: 18px; white-space: nowrap; }
+.lv .ds { font-weight: 500; opacity: .9; margin-left: 3px; }
+.lv.dim { opacity: .35; }
+.badge { font-size: 10px; font-weight: 700; border-radius: 4px; padding: 0 5px; line-height: 16px; border: 1px solid currentColor; white-space: nowrap; }
+.b-dx { color: #f08a00; } .b-std { color: #2b8be6; } .b-utage { color: var(--utage); } .b-we { color: var(--we); } .b-lun { color: var(--lun); }
+.b-gone { color: var(--faint); } .b-new { color: var(--ok); }
+.d-basic { background: var(--bas); } .d-advanced { background: var(--adv); } .d-expert { background: var(--exp); } .d-master { background: var(--mas); }
+.d-remaster { background: var(--remas); color: #3b1260 !important; } .d-ultima { background: var(--ult); color: var(--bg) !important; } .d-lunatic { background: var(--lun); }
+.d-utage { background: var(--utage); } .d-worldsend { background: var(--we); color: var(--bg) !important; }
+.more { display: block; margin: 16px auto 40px; border: 1px solid var(--line); background: var(--panel); border-radius: 8px; padding: 8px 24px; cursor: pointer; }
+.empty { text-align: center; color: var(--sub); padding: 60px 0; }
+
+/* 详情页 */
+.detail { padding: 16px 0 60px; }
+.back { border: 0; background: none; color: var(--accent); cursor: pointer; padding: 0; margin-bottom: 12px; font-weight: 600; }
+.hero { display: grid; grid-template-columns: 180px minmax(0, 1fr); column-gap: 20px; align-items: start; background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 16px; box-shadow: var(--shadow); }
+.hero .jk { grid-row: 1 / 3; }
+.hero-head, .hero-body { grid-column: 2; min-width: 0; }
+.hero .jk { width: 180px; height: 180px; border-radius: 10px; }
+.hero h2 { margin: 0; font-size: 22px; line-height: 1.3; word-break: break-word; }
+.hero .reading { color: var(--faint); font-size: 12px; }
+.hero .artist { color: var(--sub); margin: 2px 0 10px; word-break: break-word; }
+.meta { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 6px 16px; font-size: 13px; }
+.meta div span { color: var(--faint); font-size: 12px; display: block; }
+.comment { margin-top: 10px; background: var(--panel2); border-radius: 8px; padding: 8px 10px; font-size: 13px; }
+.related { margin-top: 10px; display: flex; gap: 6px; flex-wrap: wrap; align-items: center; font-size: 12px; color: var(--sub); }
+h3 { font-size: 15px; margin: 22px 0 10px; }
+.charts { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(340px, 100%), 1fr)); gap: 12px; }
+.chart { min-width: 0; background: var(--panel); border: 1px solid var(--line); border-radius: 12px; overflow: hidden; box-shadow: var(--shadow); }
+.chart-h { color: #fff; padding: 10px 14px; display: flex; align-items: baseline; gap: 10px; }
+.chart-h .dn { font-weight: 800; letter-spacing: .5px; }
+.chart-h .big { margin-left: auto; font-size: 24px; font-weight: 800; line-height: 1; }
+.chart-h .big small { font-size: 12px; font-weight: 600; opacity: .85; margin-left: 4px; }
+.chart-b { padding: 12px 14px; display: grid; gap: 10px; }
+.kv { display: grid; grid-template-columns: 64px minmax(0, 1fr); gap: 4px 8px; font-size: 13px; }
+.kv > span:nth-child(odd) { color: var(--faint); }
+.notes { display: flex; flex-wrap: wrap; gap: 4px; }
+.nt { background: var(--panel2); border-radius: 6px; padding: 2px 7px; font-size: 12px; }
+.nt b { font-variant-numeric: tabular-nums; }
+.tblwrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+table.tol { width: 100%; border-collapse: collapse; font-size: 13px; font-variant-numeric: tabular-nums; }
+table.tol th, table.tol td { padding: 5px 6px; border-bottom: 1px solid var(--line); text-align: right; }
+table.tol th:first-child, table.tol td:first-child { text-align: left; }
+table.tol th { color: var(--faint); font-weight: 600; font-size: 12px; }
+table.tol td.rk { font-weight: 800; }
+.hint { color: var(--faint); font-size: 12px; }
+.nw { white-space: nowrap; margin-right: 8px; }
+.plat { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 4px; }
+.plat > div { background: var(--panel2); border-radius: 6px; padding: 4px 6px; display: flex; flex-direction: column; align-items: center; font-variant-numeric: tabular-nums; }
+.plat .st { font-size: 12px; color: var(--sub); }
+.plat .st small { color: var(--faint); margin-left: 3px; font-size: 10px; }
+.plat b { font-size: 13px; }
+h3 .hint { font-weight: 400; margin-left: 6px; }
+details.help { margin-top: 24px; color: var(--sub); font-size: 13px; }
+details.help summary { cursor: pointer; font-weight: 600; }
+details.help ul { margin: 8px 0 0; padding-left: 20px; display: grid; gap: 4px; }
+.svs { display: flex; flex-wrap: wrap; gap: 4px; }
+.sv { background: var(--panel2); border-radius: 6px; padding: 1px 7px; font-size: 12px; color: var(--sub); font-variant-numeric: tabular-nums; }
+.sv.on { color: var(--text); font-weight: 700; box-shadow: inset 0 0 0 1px var(--accent); }
+.sv.differ { color: var(--warn); }
+.chart-h .miss { font-size: 11px; background: rgba(0,0,0,.25); border-radius: 4px; padding: 0 6px; }
+.na { color: var(--faint); }
+table.low { border-collapse: collapse; background: var(--panel); border: 1px solid var(--line); border-radius: 10px; overflow: hidden; font-size: 13px; width: 100%; max-width: 640px; }
+table.low td, table.low th { padding: 6px 10px; border-bottom: 1px solid var(--line); text-align: left; }
+table.low th { color: var(--faint); font-weight: 600; font-size: 12px; }
+footer { color: var(--faint); font-size: 12px; padding: 20px 0 40px; }
+
+@media (max-width: 640px) {
+  header .wrap { height: auto; flex-wrap: wrap; padding-top: 8px; padding-bottom: 8px; gap: 8px; }
+  .hdr-right { margin-left: auto; }
+  h1 { font-size: 15px; }
+  .tabs { order: 3; width: 100%; }
+  .hero { grid-template-columns: 84px minmax(0, 1fr); column-gap: 12px; padding: 12px; }
+  .hero .jk { grid-row: 1; width: 84px; height: 84px; border-radius: 8px; }
+  .hero h2 { font-size: 18px; }
+  .hero .artist { margin-bottom: 0; }
+  .hero-body { grid-column: 1 / -1; margin-top: 10px; }
+  .meta { grid-template-columns: 1fr 1fr; gap: 3px 12px; font-size: 12px; }
+  .meta div span { display: inline; margin-right: 6px; font-size: 11px; }
+  .chart-b { padding: 10px; }
+  table.tol { font-size: 12px; }
+  table.tol th, table.tol td { padding: 4px 3px; }
+  .plat { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .grid { grid-template-columns: 1fr; }
+}
+</style>
+</head>
+<body data-game="maimai">
+<header>
+  <div class="wrap">
+    <h1>SBGA TOOL</h1>
+    <nav class="tabs" id="tabs">
+      <button class="tab" data-game="maimai">maimai DX</button>
+      <button class="tab" data-game="chunithm">CHUNITHM</button>
+      <button class="tab" data-game="ongeki">オンゲキ</button>
+    </nav>
+    <div class="hdr-right"><span id="dataTime"></span><button class="icon-btn" id="themeBtn" title="切换深色/浅色">◐</button></div>
+  </div>
+</header>
+<main class="wrap">
+  <section id="listView">
+    <div class="filters" id="filters"></div>
+    <div class="count" id="count"></div>
+    <div class="grid" id="grid"></div>
+    <button class="more" id="more" hidden>显示更多</button>
+  </section>
+  <section id="detailView" class="detail" hidden></section>
+</main>
+<footer class="wrap">数据来源：<a href="https://arcade-songs.zetaraku.dev/" target="_blank" rel="noopener">arcade-songs</a>（曲目、版本、定数、谱师、物量）、<a href="https://otoge-db.net/" target="_blank" rel="noopener">otoge-db</a>（宴谱 / WORLD'S END / LUNATIC 的物量和谱师、wiki 链接、音击角色）、<a href="https://maimai.lxns.net/" target="_blank" rel="noopener">落雪查分器</a>（国服）、<a href="https://github.com/zkldi/Tachi" target="_blank" rel="noopener">Tachi</a>（音击参考定数、Re:MASTER 分类）。</footer>
+<script src="src/calc.js"></script>
+<script src="src/app.js"></script>
+</body>
+</html>

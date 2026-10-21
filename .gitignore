@@ -1,0 +1,4 @@
+# 安卓 App（app/）只放在本地，不进仓库：里面有签名密钥、用 SEGA 角色图做的图标素材
+app/
+*.apk
+node_modules/

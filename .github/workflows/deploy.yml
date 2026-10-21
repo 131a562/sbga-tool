@@ -1,0 +1,48 @@
+# 每天自动重新生成曲目数据，并把网页部署到 GitHub Pages
+# 仓库 Settings → Pages → Source 选「GitHub Actions」后生效
+name: 更新数据并部署
+
+on:
+  push:
+    branches: [main]
+  schedule:
+    - cron: '0 18 * * *' # 每天日本时间 3:00
+  workflow_dispatch: # 也可以在 Actions 页面手动运行
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      # 下载最新数据；某个数据源连不上时（落雪的服务器在国内，偶尔超时）沿用仓库里的数据，不影响部署
+      - name: 生成数据
+        run: node scripts/build-data.mjs || echo "::warning::数据生成失败，沿用仓库里的 data/"
+      - name: 准备网页文件
+        run: |
+          mkdir _site
+          cp -r index.html sw.js manifest.webmanifest src data icons _site/
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4
