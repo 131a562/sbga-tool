@@ -146,7 +146,7 @@
   let listScroll = 0;
 
   function defaultFilter(g) {
-    return { fv: FILTER_VERSION, q: '', mode: 'fuzzy', scope: 'title', vers: [], types: GAMES[g].types.map((t) => t[0]), diffs: [...GAMES[g].high], dsMin: '', dsMax: '', est: true, cat: '', region: 'jp', sort: 'default', desc: true };
+    return { fv: FILTER_VERSION, q: '', mode: 'fuzzy', scope: 'title', vers: [], types: GAMES[g].types.map((t) => t[0]), diffs: [...GAMES[g].high], dsMin: '', dsMax: '', est: true, cat: '', chara: '', region: 'jp', sort: 'default', desc: true };
   }
   function loadFilter(g) {
     const saved = store.get('songs.filter.' + g);
@@ -230,6 +230,7 @@
       if (!types.has(s.type)) continue;
       if (vers.size && !vers.has(verOf(s))) continue;
       if (F.cat && s.cat !== F.cat) continue;
+      if (F.chara && s.chara !== F.chara) continue;
       if (F.region !== 'all' && !(s.regions && s.regions[F.region])) continue;
       // 难度 / 定数：选中难度里至少有一个谱面在定数范围内
       let hit = null;
@@ -271,6 +272,16 @@
   }
   const cmpStr = (a, b) => (a || '').localeCompare(b || '');
 
+  // 音击的对手（敌方角色）一览，按曲目数从多到少
+  function charaList(d) {
+    if (!d._charas) {
+      const n = new Map();
+      for (const s of d.songs) if (s.chara) n.set(s.chara, (n.get(s.chara) || 0) + 1);
+      d._charas = [...n].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0], 'ja'));
+    }
+    return d._charas;
+  }
+
   // ---- 筛选面板 ----
   function renderFilters() {
     const G = GAMES[game], d = data[game];
@@ -299,6 +310,7 @@
       <div class="frow">
         <div class="fgroup"><span class="flabel">种类</span><div class="chips" id="types">${chips(G.types, F.types, 'type')}</div></div>
         <div class="fgroup"><span class="flabel">分类</span><select id="cat"><option value="">全部</option>${d.categories.map((c) => `<option ${F.cat === c ? 'selected' : ''}>${esc(c)}</option>`).join('')}</select></div>
+        ${game === 'ongeki' ? `<div class="fgroup"><span class="flabel">对手</span><select id="chara"><option value="">全部</option>${charaList(d).map(([c, n]) => `<option value="${esc(c)}" ${F.chara === c ? 'selected' : ''}>${esc(c)}（${n}）</option>`).join('')}</select></div>` : ''}
         <div class="fgroup"><span class="flabel" title="只看这个服务器现在有的曲目，定数、等级、版本也按这个服务器显示">服务器</span><select id="region">${G.regions.map(([v, n]) => `<option value="${v}">${n}</option>`).join('')}<option value="all">全部（含已删除）</option></select></div>
         <div class="fgroup"><span class="flabel">排序</span><select id="sort">${SORTS.map(([v, n]) => `<option value="${v}">${n}</option>`).join('')}</select>
           <button class="icon-btn" id="dir" title="升序/降序">${F.desc ? '↓ 降序' : '↑ 升序'}</button></div>
@@ -324,7 +336,7 @@
     });
     f.addEventListener('change', (e) => {
       const id = e.target.id;
-      if (['scope', 'cat', 'region', 'sort'].includes(id)) F[id] = e.target.value;
+      if (['scope', 'cat', 'chara', 'region', 'sort'].includes(id)) F[id] = e.target.value;
       else if (id === 'est') F.est = e.target.checked;
       else return;
       if (id === 'sort') $('#dir').disabled = F.sort === 'default';
@@ -474,6 +486,14 @@
     };
     return `<details class="help"><summary>计算说明</summary><ul>${[...common, ...per[g]].map((x) => `<li>${x}</li>`).join('')}</ul></details>`;
   }
+  // 卡片页的难度选项：难度名 + 等级（定数）
+  function diffTab(c, on, i) {
+    const G = GAMES[game];
+    const v = view(c) || viewIn(c, 'all');
+    const lv = c.d === 'worldsend' ? c.lv : v?.ds != null ? v.ds.toFixed(1) : v?.lv ?? '';
+    return `<button class="dtab dt-${c.d} ${on ? 'on' : ''} ${view(c) ? '' : 'gone'}" role="tab" data-i="${i}">
+      <span class="full">${esc(G.diffs[c.d])}</span><span class="short">${esc(G.short[c.d])}</span><small>${esc(lv)}</small></button>`;
+  }
   // 各服务器的等级 / 定数，和当前服务器不同的标出来
   function dsAcross(c) {
     const G = GAMES[game];
@@ -541,8 +561,9 @@
     v.hidden = false;
     if (!s) { v.innerHTML = `<button class="back" id="back">← 返回列表</button><div class="empty">找不到这首曲目</div>`; return; }
     document.title = `${s.title} - SBGA TOOL`;
-    const high = s.charts.filter((c) => G.high.includes(c.d));
-    const low = s.charts.filter((c) => !G.high.includes(c.d));
+    const order = Object.keys(G.diffs);
+    const charts = [...s.charts].sort((a, b) => order.indexOf(a.d) - order.indexOf(b.d));
+    const pick = charts.length - 1; // 默认最高难度
     const nt = s._nt;
     const related = d.songs.filter((x) => x !== s && x._nt === nt);
     const meta = [
@@ -569,9 +590,15 @@
         </div>
       </div>
       <h3>谱面${GAMES[g].regions.length > 1 ? ` <span class="hint">定数和 Rating 按${SERVER[F.region] || '日服'}</span>` : ''}</h3>
-      <div class="charts">${high.map((c) => chartCard(s, c)).join('')}</div>
-      ${low.length ? `<h3>低难度</h3><table class="low"><thead><tr><th>难度</th><th>等级</th><th>定数</th><th>物量</th></tr></thead><tbody>${low.map((c) => `<tr><td><span class="lv d-${c.d}">${G.diffs[c.d]}</span></td><td>${esc((view(c) || viewIn(c, 'all'))?.lv ?? '—')}</td><td>${view(c)?.ds != null ? view(c).ds.toFixed(1) : '—'}</td><td>${fmt(c.notes.total)}</td></tr>`).join('')}</tbody></table>` : ''}
+      <div class="dtabs" role="tablist">${charts.map((c, i) => diffTab(c, i === pick, i)).join('')}</div>
+      <div class="chartpanel">${chartCard(s, charts[pick])}</div>
       ${helpHtml(g)}`;
+    v.querySelector('.dtabs').addEventListener('click', (e) => {
+      const b = e.target.closest('.dtab');
+      if (!b) return;
+      for (const x of v.querySelectorAll('.dtab')) x.classList.toggle('on', x === b);
+      v.querySelector('.chartpanel').innerHTML = chartCard(s, charts[+b.dataset.i]);
+    });
     window.scrollTo(0, 0);
   }
 
