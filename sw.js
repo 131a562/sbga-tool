@@ -22,7 +22,8 @@ const FILES = [
 const COVER_HOSTS = ['dp4p6x0xfi5o9.cloudfront.net', 'assets2.lxns.net'];
 
 self.addEventListener('install', (e) => {
-  e.waitUntil(caches.open(SHELL).then((c) => c.addAll(FILES)).then(() => self.skipWaiting()));
+  // cache: 'reload'：安装时直接从服务器取，不用浏览器缓存的旧文件
+  e.waitUntil(caches.open(SHELL).then((c) => c.addAll(FILES.map((f) => new Request(f, { cache: 'reload' })))).then(() => self.skipWaiting()));
 });
 
 self.addEventListener('activate', (e) => {
