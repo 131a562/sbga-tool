@@ -201,11 +201,13 @@
     const m = /^(\d+)(\+?)/.exec(lv || '');
     return m ? +m[1] + (m[2] ? (game === 'chunithm' ? 0.5 : 0.7) : 0) : null;
   }
+  // 没有定数这个概念的谱面：WORLD'S END、等级为 0 的 LUNATIC（音击）
+  const noConst = (c, v) => c.d === 'worldsend' || (c.d === 'lunatic' && (v?.lv ?? c.lv) === '0');
   function dsOf(c) {
     const v = view(c);
     if (!v) return null;
     if (v.ds != null) return v.ds;
-    if (!F.est || c.d === 'worldsend') return null;
+    if (!F.est || noConst(c, v)) return null;
     return v.ref ?? estLv(v.lv);
   }
   function verOf(s) {
@@ -375,7 +377,7 @@
     const G = GAMES[game];
     const v = view(c);
     if (!v) return '';
-    const ds = v.ds != null ? v.ds.toFixed(1) : v.ref != null ? '~' + v.ref.toFixed(1) : c.d === 'worldsend' || c.d === 'utage' ? '' : '?';
+    const ds = v.ds != null ? v.ds.toFixed(1) : v.ref != null ? '~' + v.ref.toFixed(1) : noConst(c, v) || c.d === 'utage' ? '' : '?';
     const label = c.d === 'worldsend' ? c.lv : c.d === 'utage' ? `宴 ${v.lv}` : `${G.short[c.d]} ${v.lv}`;
     return `<span class="lv d-${c.d} ${dim ? 'dim' : ''}">${esc(label)}${ds ? `<span class="ds">${ds}</span>` : ''}</span>`;
   }
@@ -514,21 +516,23 @@
     const G = GAMES[game];
     const missing = !view(c);
     const v = view(c) || viewIn(c, 'all') || { lv: c.lv, ds: null };
-    const ds = v.ds ?? v.ref ?? estLv(v.lv);
+    const nc = noConst(c, v);
+    const ds = nc ? null : v.ds ?? v.ref ?? estLv(v.lv);
     const big = c.d === 'worldsend' ? esc(s.kanji) + `<small>${'☆'.repeat(s.star || 0)}</small>`
+      : nc ? `<small>Lv</small> ${esc(v.lv)}`
       : v.ds != null ? v.ds.toFixed(1) + `<small>Lv ${esc(v.lv)}</small>`
       : v.ref != null ? `~${v.ref.toFixed(1)}<small>Lv ${esc(v.lv)} 参考定数</small>`
       : `${esc(v.lv)}<small>定数未公开</small>`;
     let tol;
     if (c.left && c.right) {
       tol = `<div><b>左（1P）</b></div>${notesHtml(c.left)}${tolHtml(c.left, null)}<div><b>右（2P）</b></div>${notesHtml(c.right)}${tolHtml(c.right, null)}`;
-    } else tol = tolHtml(c.notes, c.d === 'utage' || c.d === 'worldsend' ? null : ds, v.ds == null);
+    } else tol = tolHtml(c.notes, c.d === 'utage' || nc ? null : ds, v.ds == null);
     const svName = SERVER[F.region] || '日服';
     return `<div class="chart">
       <div class="chart-h d-${c.d}"><span class="dn">${esc(G.diffs[c.d] || c.d)}</span>${missing ? `<span class="miss">${c.gone ? '已删除' : svName + '未实装'}</span>` : ''}<span class="big">${big}</span></div>
       <div class="chart-b">
         <div class="kv">
-          ${c.d === 'worldsend' ? `<span>等级</span><span>${esc(c.lv)}</span>` : `<span>${c.d === 'utage' ? '等级' : '定数'}</span><span>${dsAcross(c)}</span>`}
+          ${nc ? `<span>等级</span><span>${esc(c.d === 'worldsend' ? c.lv : v.lv)}</span>` : `<span>${c.d === 'utage' ? '等级' : '定数'}</span><span>${dsAcross(c)}</span>`}
           <span>谱师</span><span>${c.des ? esc(c.des) : '<span class="na">未知</span>'}</span>
           ${c.link ? `<span>谱面</span><span><a href="https://sdvx.in/${game}/${esc(c.link)}.htm" target="_blank" rel="noopener">谱面确认（sdvx.in）↗</a></span>` : ''}
           ${c.ver && c.ver !== s.ver ? `<span>追加版本</span><span>${esc(c.ver)}</span>` : ''}
