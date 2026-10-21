@@ -153,6 +153,8 @@ table.tol th:first-child, table.tol td:first-child { text-align: left; }
 table.tol th { color: var(--faint); font-weight: 600; font-size: 12px; }
 table.tol td.rk { font-weight: 800; }
 .hint { color: var(--faint); font-size: 12px; }
+.nw0 { white-space: nowrap; }
+.artist.a-body { display: none; }
 .nw { white-space: nowrap; margin-right: 8px; }
 .plat { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 4px; }
 .plat > div { background: var(--panel2); border-radius: 6px; padding: 4px 6px; display: flex; flex-direction: column; align-items: center; font-variant-numeric: tabular-nums; }
@@ -184,8 +186,16 @@ footer { color: var(--faint); font-size: 12px; padding: 20px 0 40px; }
   .hero h2 { font-size: 18px; }
   .hero .artist { margin-bottom: 0; }
   .hero-body { grid-column: 1 / -1; margin-top: 10px; }
-  .meta { grid-template-columns: 1fr 1fr; gap: 3px 12px; font-size: 12px; }
-  .meta div span { display: inline; margin-right: 6px; font-size: 11px; }
+  /* 手机上：每项「名称 内容」整体不拆开，一行放不下就整项换行 */
+  .meta { display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: 12.5px; }
+  .meta div { white-space: nowrap; }
+  .meta div.long { white-space: normal; flex-basis: 100%; }  /* 特别长的（章节名等）单独一行，可以换行 */
+  .meta div span { display: inline; margin-right: 5px; font-size: 11px; }
+  .hero .artist { font-size: 13px; line-height: 1.4; }
+  /* 艺术家名很长时，手机上移到曲绘下面整行显示，不挤在曲绘旁边 */
+  .long-artist .artist.a-head { display: none; }
+  .long-artist .artist.a-body { display: block; margin-bottom: 8px; }
+  .hero h2 { line-height: 1.25; }
   .chart-b { padding: 10px; }
   table.tol { font-size: 12px; }
   table.tol th, table.tol td { padding: 4px 3px; }

@@ -380,7 +380,7 @@
     return `<span class="lv d-${c.d} ${dim ? 'dim' : ''}">${esc(label)}${ds ? `<span class="ds">${ds}</span>` : ''}</span>`;
   }
   function typeBadge(s) {
-    if (game === 'maimai') return s.type === 'dx' ? '<span class="badge b-dx">DX</span>' : s.type === 'std' ? '<span class="badge b-std">STD</span>' : `<span class="badge b-utage">宴·${esc(s.kanji)}</span>`;
+    if (game === 'maimai') return s.type === 'dx' ? '<span class="badge b-dx">DX</span>' : s.type === 'std' ? '<span class="badge b-std">STD</span>' : `<span class="badge b-utage">宴·${esc(s.kanji)}${s.buddy ? '·双人' : ''}</span>`;
     if (s.type === 'we') return `<span class="badge b-we">WE·${esc(s.kanji)}</span>`;
     if (s.type === 'lun') return '<span class="badge b-lun">LUNATIC</span>';
     return '';
@@ -544,6 +544,10 @@
     if (!rows.length) return [];
     return rows.every(([, v]) => v === rows[0][1]) ? [['版本', rows[0][1]]] : rows.map(([n, v]) => [`${n}版本`, v]);
   }
+  // 艺术家名只在「／」「/」和括号前这些自然的地方换行（「曲：…／歌：…(CV：…)」不会从名字中间断开）
+  function artistHtml(a) {
+    return String(a ?? '').split(/(?<=[／/、,])|(?=[（(「])/).map((x) => (x.length <= 18 ? `<span class="nw0">${esc(x)}</span>` : esc(x))).join('');
+  }
   function regionText(s) {
     const G = GAMES[game];
     const on = G.regions.filter(([k]) => s.regions?.[k]).map(([, n]) => n);
@@ -566,24 +570,27 @@
     const pick = charts.length - 1; // 默认最高难度
     const nt = s._nt;
     const related = d.songs.filter((x) => x !== s && x._nt === nt);
+    // 种类已经写在曲名上方的标签里；音击只有日服，「收录」每首都一样，所以都不再列
+    const rival = s.chara ? s.chara + ([s.element, s.enemyLv != null ? `Lv ${s.enemyLv}` : null].filter(Boolean).join(' · ').replace(/^(.+)$/, '（$1）')) : null;
     const meta = [
-      ['种类', G.types.find((t) => t[0] === s.type)?.[1] + (s.kanji ? `（${s.kanji}）` : '') + (s.buddy ? ' · 双人' : '')],
-      ['分类', s.cat], ...versionRows(s), ['BPM', s.bpm ?? '—'], ['实装日期', s.date], ['收录', regionText(s)],
-      ...(g === 'ongeki' ? [['角色', s.chara], ['属性', s.element], ['敌人 Lv', s.enemyLv], ['章节', s.chapter], ['Bonus Track', s.bonus ? '是' : null]] : []),
+      ['分类', s.cat], ...versionRows(s), ['BPM', s.bpm ?? '—'], ['实装日期', s.date],
+      ...(G.regions.length > 1 ? [['收录', regionText(s)]] : []),
+      ...(g === 'ongeki' ? [['对手', rival], ['章节', s.chapter], ['Bonus Track', s.bonus ? '是' : null]] : []),
       ...(s.type === 'we' ? [['难度', s.kanji + '☆'.repeat(s.star || 0)]] : []),
     ].filter(([, x]) => x != null && x !== '');
     v.innerHTML = `
       <button class="back" id="back">← 返回列表</button>
-      <div class="hero">
+      <div class="hero${(s.artist || '').length > 30 ? ' long-artist' : ''}">
         <img class="jk" crossorigin="anonymous" src="${cover(s)}" onerror="this.onerror=null;this.src='${PLACEHOLDER}'" alt="">
         <div class="hero-head">
           <div class="cmeta" style="margin-bottom:4px">${typeBadge(s)}${s._live ? '' : '<span class="badge b-gone">已删除</span>'}${s.isNew && (F.region === 'jp' || F.region === 'all') ? '<span class="badge b-new">NEW</span>' : ''}</div>
           <h2>${esc(s.title)}</h2>
           ${s.reading ? `<div class="reading">${esc(s.reading)}</div>` : ''}
-          <div class="artist">${esc(s.artist)}</div>
+          <div class="artist a-head">${artistHtml(s.artist)}</div>
         </div>
         <div class="hero-body">
-          <div class="meta">${meta.map(([k, x]) => `<div><span>${k}</span>${esc(x)}</div>`).join('')}</div>
+          <div class="artist a-body">${artistHtml(s.artist)}</div>
+          <div class="meta">${meta.map(([k, x]) => `<div${String(x).length > 24 ? ' class="long"' : ''}><span>${k}</span>${esc(x)}</div>`).join('')}</div>
           ${s.comment ? `<div class="comment">${esc(s.comment)}</div>` : ''}
           <div class="related">${s.wiki ? `<a href="${esc(s.wiki)}" target="_blank" rel="noopener">wiki ↗</a>` : ''}
             ${related.length ? `<span>同名的其他条目：</span>${related.map((x) => `<a class="chip" href="#/${g}/song/${encodeURIComponent(x.id)}">${x.type === 'utage' || x.type === 'we' ? (x.type === 'utage' ? '宴·' : 'WE·') + esc(x.kanji) : esc(G.types.find((t) => t[0] === x.type)?.[1])}${x.artist !== s.artist ? ' · ' + esc(x.artist) : ''}</a>`).join('')}` : ''}</div>
