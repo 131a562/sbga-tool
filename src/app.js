@@ -163,7 +163,6 @@
     return (loading[g] ||= new Promise((resolve, reject) => {
       const s = document.createElement('script');
       s.src = `data/${g}.js`;
-      if (window.SONG_DATA?.[g]) setTimeout(() => s.onload()); // 内嵌的数据：直接用（setTimeout：等下面 onload 定义好）
       s.onload = () => {
         const d = window.SONG_DATA[g];
         d._verIdx = {
@@ -184,7 +183,7 @@
         resolve(d);
       };
       s.onerror = () => { delete loading[g]; s.remove(); reject(new Error(`读不到 data/${g}.js，先运行 node scripts/build-data.mjs`)); };
-      if (!window.SONG_DATA?.[g]) document.head.appendChild(s);
+      document.head.appendChild(s);
     }));
   }
 
@@ -677,46 +676,8 @@
   window.addEventListener('hashchange', route);
   // 列表滚到底自动加载更多
   new IntersectionObserver((es) => { if (es[0].isIntersecting && !$('#more').hidden && !$('#listView').hidden) more(); }, { rootMargin: '600px' }).observe($('#more'));
-  // 安卓 App（Capacitor）里：target=_blank 的外部链接（wiki、sdvx.in…）在 WebView 里打不开，改成普通跳转，
-  // Capacitor 会把站外地址交给系统浏览器打开
-  if (window.Capacitor?.isNativePlatform?.()) {
-    document.documentElement.classList.add('native');
-    // 安卓返回键：卡片页等能后退时后退，已经在最开始的页面时退出 App（@capacitor/app 插件）
-    const NativeApp = window.Capacitor.Plugins?.App;
-    NativeApp?.addListener('backButton', ({ canGoBack }) => (canGoBack ? history.back() : NativeApp.exitApp()));
-    document.addEventListener('click', (e) => {
-      const a = e.target.closest('a[target="_blank"]');
-      if (!a) return;
-      e.preventDefault();
-      window.location.href = a.href;
-    });
-  }
-  // 安卓 App：启动时看网站上的 app-version.json，有比自己新的版本就在顶部提示下载
-  const SITE = 'https://131a562.github.io/sbga-tool/';
-  async function checkAppUpdate() {
-    try {
-      const info = await window.Capacitor.Plugins.App.getInfo(); // { version: '1.5', build: '6' }
-      document.querySelector('footer').insertAdjacentHTML('beforeend', ` App 版本 ${esc(info.version)}。`);
-      const v = await (await fetch(SITE + 'app-version.json', { cache: 'no-store' })).json();
-      if (!(v.versionCode > +info.build) || store.get('songs.updateDismissed') === v.versionCode) return;
-      const bar = document.createElement('div');
-      bar.className = 'update wrap';
-      bar.innerHTML = `<div><b>有新版本 ${esc(v.versionName)}</b>（现在是 ${esc(info.version)}）${v.notes ? `<span>${esc(v.notes)}</span>` : ''}</div>
-        <a class="icon-btn primary" href="${esc(v.url)}" target="_blank" rel="noopener">下载安装包</a><button class="icon-btn" id="updLater">以后再说</button>`;
-      document.querySelector('header').after(bar);
-      bar.querySelector('#updLater').onclick = () => { store.set('songs.updateDismissed', v.versionCode); bar.remove(); };
-    } catch {}
-  }
-  if (window.Capacitor?.isNativePlatform?.()) checkAppUpdate();
-  // App 的离线页（没网时显示的、打包在 App 里的版本）：提示数据是打包时的
-  if (window.SBGA_OFFLINE) {
-    const bar = document.createElement('div');
-    bar.className = 'update wrap';
-    bar.innerHTML = '<div><b>离线模式</b><span>没连上网，显示的是安装包里的数据；联网后重新打开 App 就是最新的。</span></div>';
-    document.querySelector('header').after(bar);
-  }
-  // 网页版（PWA）：注册离线缓存。安卓 App 和直接双击打开（file://）时不用
-  if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol) && !window.Capacitor?.isNativePlatform?.() && !window.SBGA_OFFLINE) {
+  // 网页版（PWA）：注册离线缓存。直接双击打开（file://）时不用
+  if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) {
     navigator.serviceWorker.register('sw.js').catch(() => {});
   }
   bindFilters();

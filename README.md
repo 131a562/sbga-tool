@@ -11,11 +11,10 @@ maimai DX / CHUNITHM / オンゲキ 三个游戏的曲目资料（只有曲目�
   - 安卓：Chrome 打开 → 菜单 →「添加到主屏幕 / 安装应用」。
   - 第一次打开后，网页和三个游戏的数据都会缓存在手机里，没网也能查；看过的曲绘也会缓存（最多 800 张）。数据更新后，下次打开会在后台下载，再下一次打开就是新的。
 - **本地**：直接双击 `index.html` 也能用（离线缓存只在网址打开时有效）；或者 `node scripts/serve.mjs` → [http://localhost:5190/](http://localhost:5190/)
-- **安卓 App**：安装包在 [GitHub Releases](https://github.com/131a562/sbga-tool/releases)。App 平时直接打开网站（数据每天更新），没网时用安装包里的数据，有新版本时会在顶部提示。工程只在本地的 `app/` 文件夹里（说明见 `app/README.md`），不放进仓库。
 
 ## 部署（GitHub Pages）
 
-1. 在 GitHub 新建一个仓库（例如 `sbga-tool`），把这个文件夹（`songs/`）的内容作为仓库根目录推上去。`.gitignore` 排除了整个 `app/`（安卓工程，里面有签名密钥和用 SEGA 角色图做的图标素材）。
+1. 在 GitHub 新建一个仓库（例如 `sbga-tool`），把这个文件夹（`songs/`）的内容作为仓库根目录推上去。`.gitignore` 排除了本地的 `app/` 文件夹（以前试做的安卓 App，已不再维护，里面有签名密钥和用 SEGA 角色图做的图标素材）。
 2. 仓库 Settings → Pages → Build and deployment → Source 选 **GitHub Actions**。
 3. 到 Actions 页面运行一次「更新数据并部署」（之后每次推送和每天日本时间 3:00 会自动运行）。
 4. 几分钟后打开 `https://<用户名>.github.io/<仓库名>/`（现在的仓库是 [131a562/sbga-tool](https://github.com/131a562/sbga-tool)，网址 [https://131a562.github.io/sbga-tool/](https://131a562.github.io/sbga-tool/)）。
@@ -88,8 +87,7 @@ node scripts/build-data.mjs
 - `data/*.js`：生成的数据
 - `sw.js`、`manifest.webmanifest`、`icons/`：网页版（PWA）的离线缓存、应用信息、图标（图标用 `python scripts/make-web-icons.py` 生成）
 - `.github/workflows/deploy.yml`：每天更新数据并部署到 GitHub Pages
-- `app-version.json`：安卓 App 的最新版本号和下载地址（App 打开时读它，判断要不要提示更新；由 `app/scripts/release.mjs` 生成）
-- `app/`：安卓 App（Capacitor），只在本地，不在仓库里
+- `app/`：以前试做的安卓 App（Capacitor），已不再维护，只在本地，不在仓库里；手机上请用网页版「添加到主屏幕」
 
 ## 已知限制
 

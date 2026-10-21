@@ -1,7 +1,0 @@
-{
-  "versionCode": 6,
-  "versionName": "1.5",
-  "url": "https://github.com/131a562/sbga-tool/releases/download/v1.5/SBGA-TOOL-1.5.apk",
-  "notes": "App 改为直接打开网站，数据每天自动更新；没网时用安装包里的数据；有新版本时会在顶部提示",
-  "date": "2026-10-22"
-}
