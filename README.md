@@ -11,7 +11,7 @@ maimai DX / CHUNITHM / オンゲキ 三个游戏的曲目资料（只有曲目�
   - 安卓：Chrome 打开 → 菜单 →「添加到主屏幕 / 安装应用」。
   - 第一次打开后，网页和三个游戏的数据都会缓存在手机里，没网也能查；看过的曲绘也会缓存（最多 800 张）。数据更新后，下次打开会在后台下载，再下一次打开就是新的。
 - **本地**：直接双击 `index.html` 也能用（离线缓存只在网址打开时有效）；或者 `node scripts/serve.mjs` → [http://localhost:5190/](http://localhost:5190/)
-- **安卓 App**：只在本地的 `app/` 文件夹里（`app/SBGA-TOOL-1.3.apk`，打包方法见 `app/README.md`），不放进仓库。
+- **安卓 App**：只在本地的 `app/` 文件夹里（`app/SBGA-TOOL-1.4.apk`，打包方法见 `app/README.md`），不放进仓库。
 
 ## 部署（GitHub Pages）
 
