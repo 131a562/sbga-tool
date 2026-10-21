@@ -11,7 +11,7 @@ maimai DX / CHUNITHM / オンゲキ 三个游戏的曲目资料（只有曲目�
   - 安卓：Chrome 打开 → 菜单 →「添加到主屏幕 / 安装应用」。
   - 第一次打开后，网页和三个游戏的数据都会缓存在手机里，没网也能查；看过的曲绘也会缓存（最多 800 张）。数据更新后，下次打开会在后台下载，再下一次打开就是新的。
 - **本地**：直接双击 `index.html` 也能用（离线缓存只在网址打开时有效）；或者 `node scripts/serve.mjs` → [http://localhost:5190/](http://localhost:5190/)
-- **安卓 App**：只在本地的 `app/` 文件夹里（`app/SBGA-TOOL-1.4.apk`，打包方法见 `app/README.md`），不放进仓库。
+- **安卓 App**：安装包在 [GitHub Releases](https://github.com/131a562/sbga-tool/releases)。App 平时直接打开网站（数据每天更新），没网时用安装包里的数据，有新版本时会在顶部提示。工程只在本地的 `app/` 文件夹里（说明见 `app/README.md`），不放进仓库。
 
 ## 部署（GitHub Pages）
 
@@ -88,6 +88,7 @@ node scripts/build-data.mjs
 - `data/*.js`：生成的数据
 - `sw.js`、`manifest.webmanifest`、`icons/`：网页版（PWA）的离线缓存、应用信息、图标（图标用 `python scripts/make-web-icons.py` 生成）
 - `.github/workflows/deploy.yml`：每天更新数据并部署到 GitHub Pages
+- `app-version.json`：安卓 App 的最新版本号和下载地址（App 打开时读它，判断要不要提示更新；由 `app/scripts/release.mjs` 生成）
 - `app/`：安卓 App（Capacitor），只在本地，不在仓库里
 
 ## 已知限制
