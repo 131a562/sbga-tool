@@ -2,7 +2,7 @@
 //   - 网页本身和三个游戏的数据：先用缓存显示，同时在后台下载新版本，下次打开就是新的
 //   - 曲绘：看过的存起来（最多 COVER_MAX 张），没网时也能显示
 // 改了缓存的文件列表或策略时，把 VERSION 加 1，旧缓存会被清掉
-const VERSION = 'v1';
+const VERSION = 'v2';
 const SHELL = `shell-${VERSION}`;
 const COVERS = 'covers';
 const COVER_MAX = 800;
@@ -50,7 +50,8 @@ self.addEventListener('fetch', (e) => {
 async function staleWhileRevalidate(key, req) {
   const cache = await caches.open(SHELL);
   const hit = await cache.match(key, { ignoreSearch: true });
-  const fresh = fetch(req.mode === 'navigate' ? 'index.html' : req)
+  // cache: 'no-cache'：每次都向服务器确认（没变时只返回 304），不用浏览器自己缓存的旧文件（GitHub Pages 会让浏览器缓存 10 分钟）
+  const fresh = fetch(req.mode === 'navigate' ? 'index.html' : req.url, { cache: 'no-cache' })
     .then((res) => {
       if (res.ok) cache.put(key, res.clone());
       return res;
