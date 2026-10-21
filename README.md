@@ -2,15 +2,15 @@
 
 maimai DX / CHUNITHM / オンゲキ 三个游戏的曲目资料（只有曲目和谱面信息，没有成绩）。一个网页，顶部切换游戏。
 
-**网址：https://131a562.github.io/sbga-tool/**（数据每天日本时间 3:00 自动从各数据库重新获取）
+**网址：[https://131a562.github.io/sbga-tool/](https://131a562.github.io/sbga-tool/)**（数据每天日本时间 3:00 自动从各数据库重新获取）
 
 ## 打开方式
 
-- **网页版（推荐）**：手机、电脑用浏览器打开 https://131a562.github.io/sbga-tool/ 就能用（部署方法见下面「部署」）。
+- **网页版（推荐）**：手机、电脑用浏览器打开 [https://131a562.github.io/sbga-tool/](https://131a562.github.io/sbga-tool/) 就能用（部署方法见下面「部署」）。
   - iPhone：用 Safari 打开 →「分享」→「添加到主屏幕」，之后从主屏幕打开就和 App 一样全屏显示。
   - 安卓：Chrome 打开 → 菜单 →「添加到主屏幕 / 安装应用」。
   - 第一次打开后，网页和三个游戏的数据都会缓存在手机里，没网也能查；看过的曲绘也会缓存（最多 800 张）。数据更新后，下次打开会在后台下载，再下一次打开就是新的。
-- **本地**：直接双击 `index.html` 也能用（离线缓存只在网址打开时有效）；或者 `node scripts/serve.mjs` → http://localhost:5190/
+- **本地**：直接双击 `index.html` 也能用（离线缓存只在网址打开时有效）；或者 `node scripts/serve.mjs` → [http://localhost:5190/](http://localhost:5190/)
 - **安卓 App**：只在本地的 `app/` 文件夹里（`app/SBGA-TOOL-1.3.apk`，打包方法见 `app/README.md`），不放进仓库。
 
 ## 部署（GitHub Pages）
@@ -18,7 +18,7 @@ maimai DX / CHUNITHM / オンゲキ 三个游戏的曲目资料（只有曲目�
 1. 在 GitHub 新建一个仓库（例如 `sbga-tool`），把这个文件夹（`songs/`）的内容作为仓库根目录推上去。`.gitignore` 排除了整个 `app/`（安卓工程，里面有签名密钥和用 SEGA 角色图做的图标素材）。
 2. 仓库 Settings → Pages → Build and deployment → Source 选 **GitHub Actions**。
 3. 到 Actions 页面运行一次「更新数据并部署」（之后每次推送和每天日本时间 3:00 会自动运行）。
-4. 几分钟后打开 `https://<用户名>.github.io/<仓库名>/`（现在的仓库是 [131a562/sbga-tool](https://github.com/131a562/sbga-tool)，网址 https://131a562.github.io/sbga-tool/ ）。
+4. 几分钟后打开 `https://<用户名>.github.io/<仓库名>/`（现在的仓库是 [131a562/sbga-tool](https://github.com/131a562/sbga-tool)，网址 [https://131a562.github.io/sbga-tool/](https://131a562.github.io/sbga-tool/)）。
 
 工作流（`.github/workflows/deploy.yml`）每次都会重新下载数据再部署，所以网页上的数据每天自动更新，不用手动运行 `build-data.mjs`。生成的新数据只发布到网页上，不会提交回仓库，所以仓库里的 `data/` 一直是最后一次手动推送的那一版；某个数据源连不上时就用它部署，网页照常能打开。
 
