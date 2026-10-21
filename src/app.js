@@ -441,7 +441,7 @@
       head = '<th>评级</th><th>TAP GREAT</th><th>TAP GOOD</th><th>绝赞 50落</th>' + (rating ? '<th>Rating</th>' : '');
       // 绝赞 50落 不写能落几个，直接写每落一个扣多少（两个评级一样，合并成一格）
       row = (k) => `<td>${fmt(r[k].great)}</td><td>${fmt(r[k].good)}</td>` + (k === C.ranks[0].key ? `<td rowspan="${C.ranks.length}">${r.unit.brk50 == null ? '—' : `−${r.unit.brk50.toFixed(4)}%`}</td>` : '');
-      unit = `1 TAP GREAT = −${r.unit.great.toFixed(4)}%　1 TAP GOOD = −${r.unit.good.toFixed(4)}%` + (r.unit.brk100 != null ? `　1 绝赞 100落 = −${r.unit.brk100.toFixed(4)}%` : '') + `　DX 分理论值 ${fmt(r.dxMax)}`;
+      unit = `1 TAP GREAT = −${r.unit.great.toFixed(4)}%　1 TAP GOOD = −${r.unit.good.toFixed(4)}%　1 TAP MISS = −${r.unit.miss.toFixed(4)}%` + (r.unit.brk100 != null ? `　1 绝赞 100落 = −${r.unit.brk100.toFixed(4)}%` : '') + `　DX 分理论值 ${fmt(r.dxMax)}`;
     } else if (game === 'chunithm') {
       head = '<th>评级</th><th>JUSTICE</th><th>ATTACK</th>' + (rating ? '<th>Rating</th>' : '');
       row = (k) => `<td>${fmt(r[k].justice)}</td><td>${fmt(r[k].attack)}</td>`;
@@ -449,7 +449,7 @@
     } else {
       head = '<th>评级</th><th>BREAK</th><th>HIT</th><th>漏 BELL</th>' + (rating ? '<th>Rating</th>' : '');
       row = (k) => `<td>${fmt(r[k].brk)}</td><td>${fmt(r[k].hit)}</td><td>${r[k].bell == null ? '—' : fmt(r[k].bell)}</td>`;
-      unit = `1 BREAK = −${fmt(r.unit.brk, 1)}　1 HIT = −${fmt(r.unit.hit, 1)}` + (r.unit.bell != null ? `　漏 1 BELL = −${fmt(r.unit.bell, 1)}` : '');
+      unit = `1 BREAK = −${fmt(r.unit.brk, 1)}　1 HIT = −${fmt(r.unit.hit, 1)}　1 MISS = −${fmt(r.unit.miss, 1)}` + (r.unit.bell != null ? `　漏 1 BELL = −${fmt(r.unit.bell, 1)}` : '');
       if (rating) unit += `　Rating 理论值 ${approx}${C.ratingMax(ds).toFixed(3)}`;
     }
     const rows = C.ranks.map((rk) => `<tr><td class="rk">${rk.name}</td>${row(rk.key)}${rating ? `<td>${approx}${game === 'chunithm' ? rating[rk.key].toFixed(2) : game === 'ongeki' ? rating[rk.key].toFixed(3) : rating[rk.key]}</td>` : ''}</tr>`).join('');

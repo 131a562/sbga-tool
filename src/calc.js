@@ -12,11 +12,12 @@
     const B = n.break || 0;
     const great = (0.2 / W) * 100; // 一个 TAP GREAT 损失的达成率(%)
     const good = (0.5 / W) * 100;
+    const miss = (1 / W) * 100; // 一个 TAP MISS
     const brk50 = B ? 0.25 / B : null; // 一个绝赞 50 落
     const brk100 = B ? 0.5 / B : null;
     const tol = (budget) => ({ great: floor(budget / great), good: floor(budget / good), brk50: B ? floor(budget / brk50) : null });
     return {
-      unit: { great, good, brk50, brk100 },
+      unit: { great, good, miss, brk50, brk100 },
       sssp: tol(0.5),
       sss: tol(1.5),
       dxMax: n.total * 3,
@@ -39,9 +40,9 @@
   function ongekiChart(n) {
     if (!n || !n.total) return null;
     const N = n.total;
-    const brk = 95000 / N, hit = 475000 / N, bell = n.bell ? 60000 / n.bell : null;
+    const brk = 95000 / N, hit = 475000 / N, miss = 950000 / N, bell = n.bell ? 60000 / n.bell : null;
     const tol = (budget) => ({ brk: floor(budget / brk), hit: floor(budget / hit), bell: bell ? floor(budget / bell) : null });
-    return { unit: { brk, hit, bell }, sssp: tol(2500), sss: tol(10000) };
+    return { unit: { brk, hit, miss, bell }, sssp: tol(2500), sss: tol(10000) };
   }
 
   // Re:Fresh 的单曲 Rating（テクニカルスコア部分，不含灯加成），按千分之一计算，和 Tachi 的实现一致
