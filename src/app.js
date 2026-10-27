@@ -13,6 +13,7 @@
     chunithm: {
       name: 'CHUNITHM',
       types: [['std', '通常'], ['we', "WORLD'S END"]],
+      noTypeFilter: true, // 不显示「种类」：WORLD'S END 条目用「难度」里的 WORLD'S END 就能筛
       diffs: { basic: 'BASIC', advanced: 'ADVANCED', expert: 'EXPERT', master: 'MASTER', ultima: 'ULTIMA', worldsend: "WORLD'S END" },
       short: { basic: 'BAS', advanced: 'ADV', expert: 'EXP', master: 'MAS', ultima: 'ULT', worldsend: 'WE' },
       high: ['expert', 'master', 'ultima', 'worldsend'],
