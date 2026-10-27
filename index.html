@@ -110,7 +110,8 @@ details.vers[open] summary { margin-bottom: 8px; }
 .empty { text-align: center; color: var(--sub); padding: 60px 0; }
 
 /* 详情页 */
-.detail { padding: 16px 0 60px; }
+/* 详情页整体最宽 960px 居中：歌曲信息、难度选项条、谱面卡一样宽，大屏幕上表格也不会拉得太散 */
+.detail { padding: 16px 0 60px; max-width: 960px; margin: 0 auto; }
 .back { border: 0; background: none; color: var(--accent); cursor: pointer; padding: 0; margin-bottom: 12px; font-weight: 600; }
 .hero { display: grid; grid-template-columns: 180px minmax(0, 1fr); column-gap: 20px; align-items: start; background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 16px; box-shadow: var(--shadow); }
 .hero .jk { grid-row: 1 / 3; }
@@ -125,7 +126,8 @@ details.vers[open] summary { margin-bottom: 8px; }
 .related { margin-top: 10px; display: flex; gap: 6px; flex-wrap: wrap; align-items: center; font-size: 12px; color: var(--sub); }
 h3 { font-size: 15px; margin: 22px 0 10px; }
 .charts { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(340px, 100%), 1fr)); gap: 12px; }
-.dtabs { display: flex; gap: 6px; margin-bottom: 10px; max-width: 760px; }
+/* 难度选项条和谱面卡跟上面的歌曲信息（.hero）一样占满详情页的宽度 */
+.dtabs { display: flex; gap: 6px; margin-bottom: 10px; }
 .dtab { --c: var(--accent); flex: 1 1 0; min-width: 0; border: 2px solid var(--c); color: var(--c); background: var(--panel); border-radius: 8px; padding: 4px 6px; cursor: pointer; font-weight: 800; font-size: 13px; display: flex; flex-direction: column; align-items: center; line-height: 1.25; }
 .dtab small { font-weight: 600; font-size: 12px; opacity: .85; font-variant-numeric: tabular-nums; }
 .dtab .short { display: none; }
@@ -134,7 +136,6 @@ h3 { font-size: 15px; margin: 22px 0 10px; }
 .dt-basic { --c: var(--bas); } .dt-advanced { --c: var(--adv); } .dt-expert { --c: var(--exp); } .dt-master { --c: var(--mas); }
 .dt-remaster { --c: var(--remas); } .dt-remaster.on { color: #3b1260; } .dt-ultima { --c: var(--ult); } .dt-ultima.on { color: var(--bg); }
 .dt-lunatic { --c: var(--lun); } .dt-utage { --c: var(--utage); } .dt-worldsend { --c: var(--we); } .dt-worldsend.on { color: var(--bg); }
-.chartpanel { max-width: 760px; }
 .chart { min-width: 0; background: var(--panel); border: 1px solid var(--line); border-radius: 12px; overflow: hidden; box-shadow: var(--shadow); }
 .chart-h { color: #fff; padding: 10px 14px; display: flex; align-items: baseline; gap: 10px; }
 .chart-h .dn { font-weight: 800; letter-spacing: .5px; }
