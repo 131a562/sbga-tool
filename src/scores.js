@@ -109,8 +109,10 @@
   // 一条记录对应到哪个条目的哪个谱面
   function locate(game, o, d, cands) {
     if (!cands.length) return null;
+    // 同名曲里，现在还能玩的（任一服务器有收录）排在已删除的前面
+    const live = (s) => Object.values(s.regions || {}).some(Boolean);
     const pick = (list) => {
-      for (const s of list) {
+      for (const s of [...list].sort((a, b) => live(b) - live(a))) {
         const c = s.charts.find((x) => x.d === d);
         if (c) return { s, c };
       }
