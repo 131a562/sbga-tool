@@ -146,7 +146,7 @@
   let listScroll = 0;
 
   function defaultFilter(g) {
-    return { fv: FILTER_VERSION, q: '', mode: 'fuzzy', scope: 'title', vers: [], types: GAMES[g].types.map((t) => t[0]), diffs: [...GAMES[g].high], dsMin: '', dsMax: '', est: true, cat: '', chara: '', my: '', myMin: '', myMax: '', region: 'jp', sort: 'default', desc: true };
+    return { fv: FILTER_VERSION, q: '', mode: 'fuzzy', scope: 'title', vers: [], types: GAMES[g].types.map((t) => t[0]), diffs: [...GAMES[g].high], dsMin: '', dsMax: '', est: true, cat: '', chara: '', lamp: '', fb: '', myMin: '', myMax: '', region: 'jp', sort: 'default', desc: true };
   }
   function loadFilter(g) {
     const saved = store.get('songs.filter.' + g);
@@ -249,7 +249,7 @@
           const v = dsOf(c);
           if (v == null || (min != null && v < min - 1e-9) || (max != null && v > max + 1e-9)) continue;
         }
-        if (F.my && hasMine() && !myMatch(s, c)) continue;
+        if ((F.lamp || F.fb) && hasMine() && !myMatch(s, c)) continue;
         if (myRange && !inMyRange(s, c)) continue;
         if (!hit || (dsOf(c) ?? 0) > (dsOf(hit) ?? 0)) hit = c;
       }
@@ -334,9 +334,7 @@
       el.textContent = `${r.charts} 个谱面有成绩，记录到 ${r.last.slice(0, 10)}` + (r.unmatched.length ? `；${r.unmatched.length} 个谱面对不上曲目数据` : '');
       if (r.unmatched.length) el.title = '对不上的：\n' + r.unmatched.slice(0, 30).join('\n') + (r.unmatched.length > 30 ? '\n…' : '');
     }
-    const sel = $('#my');
-    if (sel) sel.disabled = !hasMine();
-    for (const id of ['myMin', 'myMax']) if ($('#' + id)) $('#' + id).disabled = !hasMine();
+    for (const id of ['lamp', 'fb', 'myMin', 'myMax']) if ($('#' + id)) $('#' + id).disabled = !hasMine();
   }
   // 自己填的分数 → 记录里的分数单位（maimai 填达成率 %，记录里是 ×10000 的整数；中二 / 音击直接是分数，可以带逗号）
   function parseMy(v) {
@@ -347,15 +345,13 @@
   // 「我的成绩」筛选：这个谱面符不符合
   function myMatch(s, c) {
     const b = myBest(s, c);
-    switch (F.my) {
-      case 'played': return !!b;
-      case 'unplayed': return !b;
-      case 'lt-sss': return !!b && b.score < Scores.RANKS[game].find(([n]) => n === 'SSS')[1];
-      case 'lt-sssp': return !!b && b.score < Scores.RANKS[game][0][1];
-      case 'nofc': return !!b && !b.lamp;
-      case 'notop': return !!b && !Scores.TOP[game].includes(b.lamp);
-      default: return true;
-    }
+    if (F.lamp === 'unplayed') return !b;
+    if (!b) return false; // 其余条件都要打过
+    if (F.lamp === 'none' && b.lamp) return false; // 打过、没有 FC 以上的灯
+    if (F.lamp && F.lamp !== 'played' && F.lamp !== 'none' && b.lamp !== F.lamp) return false; // 灯正好是这一种
+    if (F.fb === 'yes' && !b.fb) return false;
+    if (F.fb === 'no' && b.fb) return false;
+    return true;
   }
   // 谱面卡里的「我的成绩」
   function myHtml(s, c) {
@@ -418,9 +414,11 @@
         <div class="fgroup"><span class="flabel">账号</span>
           <input id="acct" type="text" placeholder="同步名字" value="${esc(mine[game]?.name ?? acctName(game))}" autocomplete="off">
           <button class="icon-btn" id="acctLoad">读取成绩</button></div>
-        <div class="fgroup"><span class="flabel">我的成绩</span><select id="my">
-          ${[['', '全部'], ['played', '打过'], ['unplayed', '没打过'], ['lt-sssp', '打过、未达 SSS+'], ['lt-sss', '打过、未达 SSS'], ['nofc', '打过、未 FC'], ['notop', `打过、未 ${Scores.TOP_NAME[game]}`]]
-            .map(([v, n]) => `<option value="${v}" ${F.my === v ? 'selected' : ''}>${n}</option>`).join('')}</select></div>
+        <div class="fgroup"><span class="flabel">灯</span><select id="lamp">
+          ${[['', '全部'], ['played', '打过'], ['unplayed', '没打过'], ['none', '未 FC'], ...Scores.LAMPS[game].map((l) => [l, l])]
+            .map(([v, n]) => `<option value="${v}" ${F.lamp === v ? 'selected' : ''}>${n}</option>`).join('')}</select></div>
+        ${game === 'ongeki' ? `<div class="fgroup"><span class="flabel">FULL BELL</span><select id="fb">
+          ${[['', '全部'], ['yes', 'FB'], ['no', '未 FB']].map(([v, n]) => `<option value="${v}" ${F.fb === v ? 'selected' : ''}>${n}</option>`).join('')}</select></div>` : ''}
         <div class="fgroup"><span class="flabel">我的分数</span>
           <input id="myMin" class="myin" type="text" inputmode="decimal" placeholder="${game === 'maimai' ? '最低 例 100' : '最低 例 1000000'}" value="${esc(F.myMin)}"> –
           <input id="myMax" class="myin" type="text" inputmode="decimal" placeholder="${game === 'maimai' ? '最高 例 100.4999' : '最高 例 1007499'}" value="${esc(F.myMax)}">
@@ -448,7 +446,7 @@
     });
     f.addEventListener('change', (e) => {
       const id = e.target.id;
-      if (['scope', 'cat', 'chara', 'region', 'sort', 'my'].includes(id)) F[id] = e.target.value;
+      if (['scope', 'cat', 'chara', 'region', 'sort', 'lamp', 'fb'].includes(id)) F[id] = e.target.value;
       else if (id === 'est') F.est = e.target.checked;
       else return;
       if (id === 'sort') $('#dir').disabled = F.sort === 'default';

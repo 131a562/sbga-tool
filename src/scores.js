@@ -161,9 +161,8 @@
   }
   const fmt = (game, v) => (game === 'maimai' ? (v / 10000).toFixed(4) + '%' : v.toLocaleString('en-US'));
   const fmtGap = (game, g) => (game === 'maimai' ? (g / 10000).toFixed(4) + '%' : g.toLocaleString('en-US'));
-  // 「全连 / 理论」级别的灯（筛选「未 AJ」等用）
-  const TOP = { chunithm: ['AJ', 'AJC'], maimai: ['AP', 'AP+'], ongeki: ['AB', 'AB+'] };
-  const TOP_NAME = { chunithm: 'AJ', maimai: 'AP', ongeki: 'AB' };
+  // 各游戏的灯（从低到高，筛选「灯」用）
+  const LAMPS = Object.fromEntries(Object.entries(GAME).map(([g, x]) => [g, x.lamps]));
 
-  window.Scores = { fetchHist, build, rank, next, fmt, fmtGap, RANKS, TOP, TOP_NAME, cleanAccount };
+  window.Scores = { fetchHist, build, rank, next, fmt, fmtGap, RANKS, LAMPS, cleanAccount };
 })();
