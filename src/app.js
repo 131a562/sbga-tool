@@ -146,7 +146,7 @@
   let listScroll = 0;
 
   function defaultFilter(g) {
-    return { fv: FILTER_VERSION, q: '', mode: 'fuzzy', scope: 'title', vers: [], types: GAMES[g].types.map((t) => t[0]), diffs: [...GAMES[g].high], dsMin: '', dsMax: '', est: true, cat: '', chara: '', my: '', region: 'jp', sort: 'default', desc: true };
+    return { fv: FILTER_VERSION, q: '', mode: 'fuzzy', scope: 'title', vers: [], types: GAMES[g].types.map((t) => t[0]), diffs: [...GAMES[g].high], dsMin: '', dsMax: '', est: true, cat: '', chara: '', my: '', myMin: '', myMax: '', region: 'jp', sort: 'default', desc: true };
   }
   function loadFilter(g) {
     const saved = store.get('songs.filter.' + g);
@@ -227,6 +227,13 @@
     F._err = '';
     const re = F.q && F.mode === 'regex' ? pattern(F.q) : null;
     const nq = tokensOf(F.q);
+    const myLo = parseMy(F.myMin), myHi = parseMy(F.myMax);
+    const myRange = hasMine() && (myLo != null || myHi != null);
+    // 自己填的分数范围：打过、而且最佳分数在范围内（两头都包含）
+    const inMyRange = (s, c) => {
+      const b = myBest(s, c);
+      return !!b && (myLo == null || b.score >= myLo) && (myHi == null || b.score <= myHi);
+    };
     const out = [];
     for (const s of d.songs) {
       if (!types.has(s.type)) continue;
@@ -243,6 +250,7 @@
           if (v == null || (min != null && v < min - 1e-9) || (max != null && v > max + 1e-9)) continue;
         }
         if (F.my && hasMine() && !myMatch(s, c)) continue;
+        if (myRange && !inMyRange(s, c)) continue;
         if (!hit || (dsOf(c) ?? 0) > (dsOf(hit) ?? 0)) hit = c;
       }
       if (!hit) continue;
@@ -328,6 +336,13 @@
     }
     const sel = $('#my');
     if (sel) sel.disabled = !hasMine();
+    for (const id of ['myMin', 'myMax']) if ($('#' + id)) $('#' + id).disabled = !hasMine();
+  }
+  // 自己填的分数 → 记录里的分数单位（maimai 填达成率 %，记录里是 ×10000 的整数；中二 / 音击直接是分数，可以带逗号）
+  function parseMy(v) {
+    const t = String(v ?? '').replace(/[,，\s%]/g, '');
+    if (t === '' || isNaN(+t)) return null;
+    return game === 'maimai' ? Math.round(+t * 10000) : Math.round(+t);
   }
   // 「我的成绩」筛选：这个谱面符不符合
   function myMatch(s, c) {
@@ -406,6 +421,10 @@
         <div class="fgroup"><span class="flabel">我的成绩</span><select id="my">
           ${[['', '全部'], ['played', '打过'], ['unplayed', '没打过'], ['lt-sssp', '打过、未达 SSS+'], ['lt-sss', '打过、未达 SSS'], ['nofc', '打过、未 FC'], ['notop', `打过、未 ${Scores.TOP_NAME[game]}`]]
             .map(([v, n]) => `<option value="${v}" ${F.my === v ? 'selected' : ''}>${n}</option>`).join('')}</select></div>
+        <div class="fgroup"><span class="flabel">我的分数</span>
+          <input id="myMin" class="myin" type="text" inputmode="decimal" placeholder="${game === 'maimai' ? '最低 例 100' : '最低 例 1000000'}" value="${esc(F.myMin)}"> –
+          <input id="myMax" class="myin" type="text" inputmode="decimal" placeholder="${game === 'maimai' ? '最高 例 100.4999' : '最高 例 1007499'}" value="${esc(F.myMax)}">
+          ${game === 'maimai' ? '<span class="hint">%</span>' : ''}</div>
         <span class="hint" id="acctStatus"></span>
       </div>
       <details class="vers" ${F.vers.length ? 'open' : ''}>
@@ -425,7 +444,7 @@
     f.addEventListener('input', (e) => {
       const id = e.target.id;
       if (id === 'q') { F.q = e.target.value; clearTimeout(t); t = setTimeout(refresh, 120); return; }
-      if (id === 'dsMin' || id === 'dsMax') { F[id] = e.target.value; clearTimeout(t); t = setTimeout(refresh, 200); }
+      if (['dsMin', 'dsMax', 'myMin', 'myMax'].includes(id)) { F[id] = e.target.value; clearTimeout(t); t = setTimeout(refresh, 250); }
     });
     f.addEventListener('change', (e) => {
       const id = e.target.id;
