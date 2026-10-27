@@ -3,6 +3,7 @@
 //   obs = 观测记录（src 'b' 成绩扫描 / 'p' プレイ履歴），每条有曲名 n、难度 d、分数（中二 / 音击 s，maimai a = 达成率×10000）和灯
 (function () {
   const SYNC_URL = 'https://otoge-sync.131a562-index01.workers.dev';
+  const SITE_ORIGIN = 'https://131a562.github.io'; // 同步服务允许读取的网站
   const norm = (s) => String(s ?? '').normalize('NFKC').replace(/\s+/g, ' ').trim().toLowerCase();
 
   // 同步名字的统一写法（和三个书签、查分面板的 cleanAccount 相同）：全角英数字转半角、英文字母转大写
@@ -22,7 +23,13 @@
     const tryName = async (n) => {
       let res;
       try { res = await fetch(`${syncUrl()}/${game}/${encodeURIComponent(n)}/raw`, { cache: 'no-store' }); }
-      catch { throw new Error('连不上同步服务'); }
+      catch {
+        // 同步服务只允许网站（131a562.github.io）读取：本地文件、本地预览会被浏览器拦下，看起来就像连不上
+        if (syncUrl() === SYNC_URL && location.origin !== SITE_ORIGIN) {
+          throw new Error(`本地打开时读不到成绩：同步服务只允许网站 ${SITE_ORIGIN} 读取，请用网址打开`);
+        }
+        throw new Error('连不上同步服务');
+      }
       if (res.status === 404) return null;
       if (!res.ok) throw new Error('同步服务返回 HTTP ' + res.status);
       const h = JSON.parse(await res.text());
