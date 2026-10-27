@@ -146,7 +146,7 @@
   let listScroll = 0;
 
   function defaultFilter(g) {
-    return { fv: FILTER_VERSION, q: '', mode: 'fuzzy', scope: 'title', vers: [], types: GAMES[g].types.map((t) => t[0]), diffs: [...GAMES[g].high], dsMin: '', dsMax: '', est: true, cat: '', chara: '', lamp: '', fb: '', myMin: '', myMax: '', region: 'jp', sort: 'default', desc: true };
+    return { fv: FILTER_VERSION, q: '', mode: 'fuzzy', scope: 'title', vers: [], types: GAMES[g].types.map((t) => t[0]), diffs: [...GAMES[g].high], dsMin: '', dsMax: '', est: true, cat: '', chara: '', lampLo: null, lampHi: null, fb: '', myMin: '', myMax: '', region: 'jp', sort: 'default', desc: true };
   }
   function loadFilter(g) {
     const saved = store.get('songs.filter.' + g);
@@ -249,7 +249,7 @@
           const v = dsOf(c);
           if (v == null || (min != null && v < min - 1e-9) || (max != null && v > max + 1e-9)) continue;
         }
-        if ((F.lamp || F.fb) && hasMine() && !myMatch(s, c)) continue;
+        if ((lampOn() || F.fb) && hasMine() && !myMatch(s, c)) continue;
         if (myRange && !inMyRange(s, c)) continue;
         if (!hit || (dsOf(c) ?? 0) > (dsOf(hit) ?? 0)) hit = c;
       }
@@ -334,7 +334,8 @@
       el.textContent = `${r.charts} 个谱面有成绩，记录到 ${r.last.slice(0, 10)}` + (r.unmatched.length ? `；${r.unmatched.length} 个谱面对不上曲目数据` : '');
       if (r.unmatched.length) el.title = '对不上的：\n' + r.unmatched.slice(0, 30).join('\n') + (r.unmatched.length > 30 ? '\n…' : '');
     }
-    for (const id of ['lamp', 'fb', 'myMin', 'myMax']) if ($('#' + id)) $('#' + id).disabled = !hasMine();
+    for (const id of ['lampLo', 'lampHi', 'fb', 'myMin', 'myMax']) if ($('#' + id)) $('#' + id).disabled = !hasMine();
+    $('#lampSlider')?.classList.toggle('off', !hasMine());
   }
   // 自己填的分数 → 记录里的分数单位（maimai 填达成率 %，记录里是 ×10000 的整数；中二 / 音击直接是分数，可以带逗号）
   function parseMy(v) {
@@ -343,12 +344,21 @@
     return game === 'maimai' ? Math.round(+t * 10000) : Math.round(+t);
   }
   // 「我的成绩」筛选：这个谱面符不符合
+  // 灯的档位，从左到右：未游玩、未 FC、之后是这个游戏的各种灯（例：maimai 未游玩-未FC-FC-FC+-AP-AP+）
+  const lampLevels = () => ['未游玩', '未FC', ...Scores.LAMPS[game]];
+  const lampLevel = (b) => (!b ? 0 : !b.lamp ? 1 : 2 + Scores.LAMPS[game].indexOf(b.lamp));
+  const lampRange = () => {
+    const top = lampLevels().length - 1;
+    const lo = Math.min(Math.max(F.lampLo ?? 0, 0), top), hi = Math.min(Math.max(F.lampHi ?? top, 0), top);
+    return [Math.min(lo, hi), Math.max(lo, hi), top];
+  };
+  const lampOn = () => { const [lo, hi, top] = lampRange(); return lo > 0 || hi < top; };
   function myMatch(s, c) {
     const b = myBest(s, c);
-    if (F.lamp === 'unplayed') return !b;
-    if (!b) return false; // 其余条件都要打过
-    if (F.lamp === 'none' && b.lamp) return false; // 打过、没有 FC 以上的灯
-    if (F.lamp && F.lamp !== 'played' && F.lamp !== 'none' && b.lamp !== F.lamp) return false; // 灯正好是这一种
+    const [lo, hi] = lampRange();
+    const lv = lampLevel(b);
+    if (lv < lo || lv > hi) return false;
+    if (F.fb && !b) return false; // FB 的条件要打过
     if (F.fb === 'yes' && !b.fb) return false;
     if (F.fb === 'no' && b.fb) return false;
     return true;
@@ -414,9 +424,7 @@
         <div class="fgroup"><span class="flabel">账号</span>
           <input id="acct" type="text" placeholder="同步名字" value="${esc(mine[game]?.name ?? acctName(game))}" autocomplete="off">
           <button class="icon-btn" id="acctLoad">读取成绩</button></div>
-        <div class="fgroup"><span class="flabel">灯</span><select id="lamp">
-          ${[['', '全部'], ['played', '打过'], ['unplayed', '没打过'], ['none', '未 FC'], ...Scores.LAMPS[game].map((l) => [l, l])]
-            .map(([v, n]) => `<option value="${v}" ${F.lamp === v ? 'selected' : ''}>${n}</option>`).join('')}</select></div>
+        <div class="fgroup lampg"><span class="flabel">灯</span>${lampSliderHtml()}<span class="hint" id="lampTxt"></span></div>
         ${game === 'ongeki' ? `<div class="fgroup"><span class="flabel">FB</span><select id="fb">
           ${[['', '全部'], ['yes', 'FB'], ['no', '未 FB']].map(([v, n]) => `<option value="${v}" ${F.fb === v ? 'selected' : ''}>${n}</option>`).join('')}</select></div>` : ''}
         <div class="fgroup"><span class="flabel">我的分数</span>
@@ -434,6 +442,29 @@
     $('#sort').value = F.sort;
     $('#dir').disabled = F.sort === 'default';
     acctStatus();
+    lampSliderSync();
+  }
+
+  // 灯的滑槽：两个滑块选一个范围（左边的滑块 = 最低，右边 = 最高），默认整条 = 不限
+  function lampSliderHtml() {
+    const lv = lampLevels(), [lo, hi, top] = lampRange();
+    return `<div class="lampsl" id="lampSlider" style="--n:${top}">
+      <div class="track"><div class="fill"></div></div>
+      <input type="range" id="lampLo" min="0" max="${top}" step="1" value="${lo}" aria-label="灯（最低）">
+      <input type="range" id="lampHi" min="0" max="${top}" step="1" value="${hi}" aria-label="灯（最高）">
+      <div class="ticks">${lv.map((n, i) => `<span style="--i:${i}">${esc(n)}</span>`).join('')}</div></div>`;
+  }
+  // 滑块位置 → 填充条、文字、两头重叠时谁在上面
+  function lampSliderSync() {
+    const el = $('#lampSlider');
+    if (!el) return;
+    const lv = lampLevels(), [lo, hi, top] = lampRange();
+    el.querySelector('.fill').style.left = (lo / top) * 100 + '%';
+    el.querySelector('.fill').style.right = (1 - hi / top) * 100 + '%';
+    // 两个滑块都在最右边时，让「最低」浮在上面，否则拖不动
+    $('#lampLo').style.zIndex = lo >= top ? 3 : 2;
+    $('#lampTxt').textContent = !lampOn() ? '不限' : lo === hi ? lv[lo] : `${lv[lo]} 〜 ${lv[hi]}`;
+    el.querySelectorAll('.ticks span').forEach((t, i) => t.classList.toggle('in', i >= lo && i <= hi));
   }
 
   function bindFilters() {
@@ -443,10 +474,18 @@
       const id = e.target.id;
       if (id === 'q') { F.q = e.target.value; clearTimeout(t); t = setTimeout(refresh, 120); return; }
       if (['dsMin', 'dsMax', 'myMin', 'myMax'].includes(id)) { F[id] = e.target.value; clearTimeout(t); t = setTimeout(refresh, 250); }
+      if (id === 'lampLo' || id === 'lampHi') {
+        // 不让两个滑块交叉：拖过头就把另一个一起推过去
+        let lo = +$('#lampLo').value, hi = +$('#lampHi').value;
+        if (lo > hi) { if (id === 'lampLo') hi = lo; else lo = hi; $('#lampLo').value = lo; $('#lampHi').value = hi; }
+        F.lampLo = lo; F.lampHi = hi;
+        lampSliderSync();
+        clearTimeout(t); t = setTimeout(refresh, 150);
+      }
     });
     f.addEventListener('change', (e) => {
       const id = e.target.id;
-      if (['scope', 'cat', 'chara', 'region', 'sort', 'lamp', 'fb'].includes(id)) F[id] = e.target.value;
+      if (['scope', 'cat', 'chara', 'region', 'sort', 'fb'].includes(id)) F[id] = e.target.value;
       else if (id === 'est') F.est = e.target.checked;
       else return;
       if (id === 'sort') $('#dir').disabled = F.sort === 'default';

@@ -157,7 +157,23 @@ table.tol td.rk { font-weight: 800; }
 #acctStatus.err { color: var(--bad); }
 #acct { border: 1px solid var(--line); border-radius: 8px; padding: 6px 8px; background: var(--panel); width: 160px; }
 .myin { border: 1px solid var(--line); border-radius: 8px; padding: 6px 8px; background: var(--panel); width: 128px; }
-.myin:disabled, #lamp:disabled, #fb:disabled { opacity: .5; }
+.myin:disabled, #fb:disabled { opacity: .5; }
+/* 灯的滑槽：两个 range 叠在一起，只有滑块能点 */
+.lampsl { --thumb: 16px; position: relative; width: 300px; height: 38px; }
+.lampsl.off { opacity: .5; }
+.lampsl .track { position: absolute; left: calc(var(--thumb) / 2); right: calc(var(--thumb) / 2); top: 7px; height: 4px; border-radius: 2px; background: var(--line); }
+.lampsl .fill { position: absolute; top: 0; bottom: 0; background: var(--accent); border-radius: 2px; }
+.lampsl input[type=range] { position: absolute; left: 0; top: 0; width: 100%; height: 18px; margin: 0; background: none; pointer-events: none; -webkit-appearance: none; appearance: none; z-index: 2; }
+.lampsl input[type=range]::-webkit-slider-runnable-track { background: none; height: 18px; }
+.lampsl input[type=range]::-moz-range-track { background: none; }
+.lampsl input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; pointer-events: auto; width: var(--thumb); height: var(--thumb); margin-top: 1px; border-radius: 50%; background: var(--panel); border: 2px solid var(--accent); cursor: pointer; }
+.lampsl input[type=range]::-moz-range-thumb { pointer-events: auto; width: 12px; height: 12px; border-radius: 50%; background: var(--panel); border: 2px solid var(--accent); cursor: pointer; }
+.lampsl input[type=range]:disabled::-webkit-slider-thumb { cursor: default; }
+.lampsl .ticks span { position: absolute; top: 20px; left: calc(var(--thumb) / 2 + (100% - var(--thumb)) * var(--i) / var(--n)); transform: translateX(-50%); font-size: 11px; color: var(--faint); white-space: nowrap; }
+.lampsl .ticks span.in { color: var(--text); font-weight: 700; }
+.lampsl .ticks span:first-child { transform: translateX(calc(-1 * var(--thumb) / 2)); }
+.lampsl .ticks span:last-child { transform: translateX(calc(-100% + var(--thumb) / 2)); }
+#lampTxt { min-width: 4em; }
 .mine { display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px 8px; }
 .mine b { font-size: 15px; font-variant-numeric: tabular-nums; }
 .myr { font-weight: 800; color: var(--accent); }
@@ -210,6 +226,8 @@ footer { color: var(--faint); font-size: 12px; padding: 20px 0 40px; }
   table.tol { font-size: 12px; }
   table.tol th, table.tol td { padding: 4px 3px; }
   .plat { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .lampg { flex-wrap: wrap; }
+  .lampsl { width: min(300px, calc(100vw - 100px)); }
   .dtabs { gap: 4px; }
   .dtab { padding: 4px 2px; font-size: 12px; }
   .dtab .full { display: none; }
