@@ -424,9 +424,7 @@
         <div class="fgroup"><span class="flabel">账号</span>
           <input id="acct" type="text" placeholder="同步名字" value="${esc(mine[game]?.name ?? acctName(game))}" autocomplete="off">
           <button class="icon-btn" id="acctLoad">读取成绩</button></div>
-        <div class="fgroup lampg"><span class="flabel">灯</span>${lampSliderHtml()}<span class="hint" id="lampTxt"></span></div>
-        ${game === 'ongeki' ? `<div class="fgroup"><span class="flabel">FB</span><select id="fb">
-          ${[['', '全部'], ['yes', 'FB'], ['no', '未 FB']].map(([v, n]) => `<option value="${v}" ${F.fb === v ? 'selected' : ''}>${n}</option>`).join('')}</select></div>` : ''}
+        <div class="fgroup lampg">${lampSliderHtml()}<span class="hint" id="lampTxt"></span>${game === 'ongeki' ? fbBtnHtml() : ''}</div>
         <div class="fgroup"><span class="flabel">我的分数</span>
           <input id="myMin" class="myin" type="text" inputmode="decimal" placeholder="${game === 'maimai' ? '最低 例 100' : '最低 例 1000000'}" value="${esc(F.myMin)}"> –
           <input id="myMax" class="myin" type="text" inputmode="decimal" placeholder="${game === 'maimai' ? '最高 例 100.4999' : '最高 例 1007499'}" value="${esc(F.myMax)}">
@@ -454,6 +452,9 @@
       <input type="range" id="lampHi" min="0" max="${top}" step="1" value="${hi}" aria-label="灯（最高）">
       <div class="ticks">${lv.map((n, i) => `<span style="--i:${i}">${esc(n)}</span>`).join('')}</div></div>`;
   }
+  // 音击的 FB：一个小按钮，点一下切换 不限 → 只看 FB → 只看未 FB
+  const fbText = () => (F.fb === 'no' ? '未FB' : 'FB');
+  const fbBtnHtml = () => `<button class="chip fbbtn ${F.fb ? 'on' : ''}" id="fb" title="点一下切换：不限 → 只看 FB → 只看未 FB">${fbText()}</button>`;
   // 滑块位置 → 填充条、文字、两头重叠时谁在上面
   function lampSliderSync() {
     const el = $('#lampSlider');
@@ -485,7 +486,7 @@
     });
     f.addEventListener('change', (e) => {
       const id = e.target.id;
-      if (['scope', 'cat', 'chara', 'region', 'sort', 'fb'].includes(id)) F[id] = e.target.value;
+      if (['scope', 'cat', 'chara', 'region', 'sort'].includes(id)) F[id] = e.target.value;
       else if (id === 'est') F.est = e.target.checked;
       else return;
       if (id === 'sort') $('#dir').disabled = F.sort === 'default';
@@ -514,6 +515,7 @@
       }
       else if (b.id === 'dir') { F.desc = !F.desc; b.textContent = F.desc ? '↓ 降序' : '↑ 升序'; }
       else if (b.id === 'reset') { F = defaultFilter(game); renderFilters(); }
+      else if (b.id === 'fb') { F.fb = F.fb === '' ? 'yes' : F.fb === 'yes' ? 'no' : ''; b.textContent = fbText(); b.classList.toggle('on', !!F.fb); }
       else if (b.id === 'acctLoad') {
         const name = $('#acct').value.trim();
         store.set('songs.account.' + game, name);
