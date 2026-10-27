@@ -605,7 +605,7 @@
       ],
       ongeki: [
         '容错前提：其余全部 CRITICAL BREAK、BELL 全收、无被弹。判定 950,000 按物量平分（BREAK 90%、HIT 50%），BELL 60,000 按 BELL 数平分。',
-        `Rating 是 Re:Fresh 的テクニカル部分，不含灯加成：${Calc.ongeki.lamps.map(([n, v]) => `${n} +${(v / 1000).toFixed(3)}`).join('、')}（FB 可以和其他灯叠加）。理论值 = 1,010,000 + AB+ + FB。`,
+        `Rating 是 Re:Fresh 的テクニカル部分，不含灯加成：${Calc.ongeki.lamps.map(([n, v]) => `${n} +${(v / 1000).toFixed(3)}`).join('、')}（FB 可以和其他灯叠加）。理论值 = 1,010,000・AB+・FB。`,
         'プラチナスコア理论值 = 物量 × 2，★1〜★5 / 虹★ 需要理论值的 94%〜99%；星级 Rating = ⌊★数 × 定数²⌋ ÷ 1000（虹★ 同 ★5）。',
       ],
     };
