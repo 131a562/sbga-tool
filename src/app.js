@@ -395,7 +395,7 @@
     : F.mode === 'regex' ? '_ = 一个非空格字符，* = 一个以上非空格字符，例如 ら__ら、love*song' : '曲名 / 读音（片假名=平假名，忽略符号；不跨单词；用空格隔开可以搜几个词）');
   function renderFilters() {
     const G = GAMES[game], d = data[game];
-    const chips = (items, sel, attr) => items.map(([v, n]) => `<button class="chip ${sel.includes(v) ? 'on' : ''}" data-${attr}="${esc(v)}">${esc(n)}</button>`).join('');
+    const chips = (items, sel, attr) => items.map(([v, n, full]) => `<button class="chip ${sel.includes(v) ? 'on' : ''}" data-${attr}="${esc(v)}"${full ? ` title="${esc(full)}"` : ''}>${esc(n)}</button>`).join('');
     const used = new Set(d.songs.map(verOf));
     const vers = verList().filter((v) => used.has(v)).map((v) => [v, v]);
     $('#filters').innerHTML = `
@@ -415,7 +415,7 @@
           <input id="dsMax" type="number" step="0.1" min="1" max="16" placeholder="最高" value="${esc(F.dsMax)}"></span>
           <label class="chk" title="定数还没公开的谱面${game === 'ongeki' ? '，有参考定数的用参考定数，没有的' : ''}按等级估算（13+ ≈ ${game === 'chunithm' ? '13.5' : '13.7'}）"><input type="checkbox" id="est" ${F.est ? 'checked' : ''}>未公开的按${game === 'ongeki' ? '参考值/' : ''}等级估</label>
         </div></div>
-        <div class="fgroup"><span class="flabel">难度</span><div class="fctl chips" id="diffs">${chips(G.high.map((k) => [k, G.diffs[k]]), F.diffs, 'diff')}</div></div>
+        <div class="fgroup"><span class="flabel">难度</span><div class="fctl chips" id="diffs">${chips(G.high.map((k) => [k, G.short[k], G.diffs[k]]), F.diffs, 'diff')}</div></div>
       </div>
       <div class="frow">
         ${G.noTypeFilter ? '' : `<div class="fgroup"><span class="flabel">种类</span><div class="fctl chips" id="types">${chips(G.types, F.types, 'type')}</div></div>`}
