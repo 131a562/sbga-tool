@@ -22,6 +22,7 @@
     ongeki: {
       name: 'オンゲキ',
       types: [['std', '通常'], ['lun', 'LUNATIC']],
+      noTypeFilter: true, // 不显示「种类」：LUNATIC 条目用「难度」里的 LUNATIC 就能筛
       diffs: { basic: 'BASIC', advanced: 'ADVANCED', expert: 'EXPERT', master: 'MASTER', remaster: 'Re:MASTER', lunatic: 'LUNATIC' },
       short: { basic: 'BAS', advanced: 'ADV', expert: 'EXP', master: 'MAS', remaster: 'ReM', lunatic: 'LUN' },
       high: ['expert', 'master', 'remaster', 'lunatic'],
@@ -236,7 +237,7 @@
     };
     const out = [];
     for (const s of d.songs) {
-      if (!types.has(s.type)) continue;
+      if (!GAMES[game].noTypeFilter && !types.has(s.type)) continue;
       if (vers.size && !vers.has(verOf(s))) continue;
       if (F.cat && s.cat !== F.cat) continue;
       if (F.chara && s.chara !== F.chara) continue;
@@ -412,7 +413,7 @@
         <div class="fgroup"><span class="flabel">难度</span><div class="chips" id="diffs">${chips(G.high.map((k) => [k, G.diffs[k]]), F.diffs, 'diff')}</div></div>
       </div>
       <div class="frow">
-        <div class="fgroup"><span class="flabel">种类</span><div class="chips" id="types">${chips(G.types, F.types, 'type')}</div></div>
+        ${G.noTypeFilter ? '' : `<div class="fgroup"><span class="flabel">种类</span><div class="chips" id="types">${chips(G.types, F.types, 'type')}</div></div>`}
         <div class="fgroup"><span class="flabel">分类</span><select id="cat"><option value="">全部</option>${d.categories.map((c) => `<option ${F.cat === c ? 'selected' : ''}>${esc(c)}</option>`).join('')}</select></div>
         ${game === 'ongeki' ? `<div class="fgroup"><span class="flabel">对手</span><select id="chara"><option value="">全部</option>${charaList(d).map(([c, n]) => `<option value="${esc(c)}" ${F.chara === c ? 'selected' : ''}>${esc(c)}（${n}）</option>`).join('')}</select></div>` : ''}
         <div class="fgroup"><span class="flabel" title="只看这个服务器现在有的曲目，定数、等级、版本也按这个服务器显示">服务器</span><select id="region">${G.regions.map(([v, n]) => `<option value="${v}">${n}</option>`).join('')}<option value="all">全部（含已删除）</option></select></div>
