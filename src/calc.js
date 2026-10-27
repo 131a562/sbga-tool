@@ -62,6 +62,14 @@
     return { max, stars, rating5: ds != null ? Math.floor(5 * ds * ds) / 1000 : null };
   }
 
+  // maimai 的 DX 分：理论值 = 物量 × 3；✦1〜✦5 需要理论值的 85% / 90% / 93% / 95% / 97%
+  function maimaiDxStars(total) {
+    if (!total) return null;
+    const max = total * 3;
+    const stars = [85, 90, 93, 95, 97].map((pct, i) => ({ n: i + 1, pct, need: Math.ceil((max * pct) / 100) }));
+    return { max, stars };
+  }
+
   window.Calc = {
     maimai: {
       chart: maimaiChart,
@@ -70,6 +78,7 @@
         { key: 'sss', name: 'SSS', need: '100.0000%' },
       ],
       rating: (ds) => ({ sssp: maimaiRating(ds, 100.5, 22.4), sss: maimaiRating(ds, 100, 21.6) }),
+      dxStars: maimaiDxStars,
     },
     chunithm: {
       chart: chuniChart,

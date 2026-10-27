@@ -342,12 +342,6 @@
       default: return true;
     }
   }
-  // 成绩的简短标记：评级 + 灯（列表上、难度按钮上用）
-  function myTag(s, c) {
-    const b = myBest(s, c);
-    if (!b) return '';
-    return Scores.rank(game, b.score) + (b.lamp ? '·' + b.lamp : '');
-  }
   // 谱面卡里的「我的成绩」
   function myHtml(s, c) {
     if (!hasMine()) return '';
@@ -357,7 +351,10 @@
     const extra = [];
     if (game === 'maimai') {
       if (b.sync) extra.push(b.sync);
-      if (b.dxMax) extra.push(`DX 分 ${fmt(b.dx || 0)} / ${fmt(b.dxMax)}`);
+      if (b.dxMax) {
+        const st = Calc.maimai.dxStars(b.dxMax / 3).stars.filter((x) => (b.dx || 0) >= x.need).pop();
+        extra.push(`DX 分 ${fmt(b.dx || 0)} / ${fmt(b.dxMax)}${st ? `（✦${st.n}）` : ''}`);
+      }
     }
     if (game === 'ongeki') {
       if (b.fb) extra.push('FULL BELL');
@@ -474,14 +471,13 @@
   const updVerSummary = () => { $('#filters summary').textContent = `版本${F.vers.length ? `（已选 ${F.vers.length} 个）` : '（全部）'}`; };
 
   // ---- 列表 ----
-  function lvChip(c, dim, s) {
+  function lvChip(c, dim) {
     const G = GAMES[game];
     const v = view(c);
     if (!v) return '';
     const ds = v.ds != null ? v.ds.toFixed(1) : v.ref != null ? '~' + v.ref.toFixed(1) : noConst(c, v) || c.d === 'utage' ? '' : '?';
     const label = c.d === 'worldsend' ? c.lv : c.d === 'utage' ? `宴 ${v.lv}` : `${G.short[c.d]} ${v.lv}`;
-    const tag = s ? myTag(s, c) : '';
-    return `<span class="lv d-${c.d} ${dim ? 'dim' : ''}">${esc(label)}${ds ? `<span class="ds">${ds}</span>` : ''}${tag ? `<span class="myt">${esc(tag)}</span>` : ''}</span>`;
+    return `<span class="lv d-${c.d} ${dim ? 'dim' : ''}">${esc(label)}${ds ? `<span class="ds">${ds}</span>` : ''}</span>`;
   }
   function typeBadge(s) {
     if (game === 'maimai') return s.type === 'dx' ? '<span class="badge b-dx">DX</span>' : s.type === 'std' ? '<span class="badge b-std">STD</span>' : `<span class="badge b-utage">宴·${esc(s.kanji)}${s.buddy ? '·双人' : ''}</span>`;
@@ -543,7 +539,7 @@
       head = '<th>评级</th><th>TAP GREAT</th><th>TAP GOOD</th><th>绝赞 50落</th>' + (rating ? '<th>Rating</th>' : '');
       // 绝赞 50落 不写能落几个，直接写每落一个扣多少（两个评级一样，合并成一格）
       row = (k) => `<td>${fmt(r[k].great)}</td><td>${fmt(r[k].good)}</td>` + (k === C.ranks[0].key ? `<td rowspan="${C.ranks.length}">${r.unit.brk50 == null ? '—' : `−${r.unit.brk50.toFixed(4)}%`}</td>` : '');
-      unit = `1 TAP GREAT = −${r.unit.great.toFixed(4)}%　1 TAP GOOD = −${r.unit.good.toFixed(4)}%　1 TAP MISS = −${r.unit.miss.toFixed(4)}%` + (r.unit.brk100 != null ? `　1 绝赞 100落 = −${r.unit.brk100.toFixed(4)}%` : '') + `　DX 分理论值 ${fmt(r.dxMax)}`;
+      unit = `1 TAP GREAT = −${r.unit.great.toFixed(4)}%　1 TAP GOOD = −${r.unit.good.toFixed(4)}%　1 TAP MISS = −${r.unit.miss.toFixed(4)}%` + (r.unit.brk100 != null ? `　1 绝赞 100落 = −${r.unit.brk100.toFixed(4)}%` : '');
     } else if (game === 'chunithm') {
       head = '<th>评级</th><th>JUSTICE</th><th>ATTACK</th>' + (rating ? '<th>Rating</th>' : '');
       row = (k) => `<td>${fmt(r[k].justice)}</td><td>${fmt(r[k].attack)}</td>`;
@@ -555,7 +551,14 @@
       if (rating) unit += `　Rating 理论值 ${approx}${C.ratingMax(ds).toFixed(3)}`;
     }
     const rows = C.ranks.map((rk) => `<tr><td class="rk">${rk.name}</td>${row(rk.key)}${rating ? `<td>${approx}${game === 'chunithm' ? rating[rk.key].toFixed(2) : game === 'ongeki' ? rating[rk.key].toFixed(3) : rating[rk.key]}</td>` : ''}</tr>`).join('');
-    return `<div class="tblwrap"><table class="tol"><thead><tr>${head}</tr></thead><tbody>${rows}</tbody></table></div><div class="hint">${unit.split('　').map((u) => `<span class="nw">${u}</span>`).join(' ')}</div>${C.platinum ? platHtml(n.total, ds, approx) : ''}`;
+    return `<div class="tblwrap"><table class="tol"><thead><tr>${head}</tr></thead><tbody>${rows}</tbody></table></div><div class="hint">${unit.split('　').map((u) => `<span class="nw">${u}</span>`).join(' ')}</div>${C.platinum ? platHtml(n.total, ds, approx) : ''}${C.dxStars ? dxStarHtml(n.total) : ''}`;
+  }
+  // 舞萌的 DX 分：各星级需要的分数（理论值 = 物量 × 3）
+  function dxStarHtml(total) {
+    const p = Calc.maimai.dxStars(total);
+    if (!p) return '';
+    return `<div class="plat dx">${p.stars.map((x) => `<div><span class="st">✦${x.n}<small>${x.pct}%</small></span><b>${fmt(x.need)}</b></div>`).join('')}</div>
+      <div class="hint">DX 分理论值 ${fmt(p.max)}</div>`;
   }
   // 音击 Re:Fresh 的プラチナスコア：各星级需要的分数和 ★5 的星级 Rating
   function platHtml(total, ds, approx) {
@@ -574,7 +577,8 @@
     const per = {
       maimai: [
         '容错前提：其余全部 CRITICAL PERFECT。基础 100% 按 TAP·TOUCH 1、HOLD 2、SLIDE 3、BREAK 5 的权重平分，绝赞奖励 1% 按 BREAK 数平分；TAP GREAT 少 0.2 权重、GOOD 少 0.5，绝赞 50落 奖励只剩 75%、100落 只剩 50%。',
-        'Rating：SSS+ = ⌊定数 × 22.4 × 1.005⌋，SSS = ⌊定数 × 21.6⌋。DX 分理论值 = 物量 × 3。',
+        'Rating：SSS+ = ⌊定数 × 22.4 × 1.005⌋，SSS = ⌊定数 × 21.6⌋。',
+        'DX 分理论值 = 物量 × 3（CRITICAL PERFECT 3 分、PERFECT 2 分、GREAT 1 分）；✦1〜✦5 需要理论值的 85% / 90% / 93% / 95% / 97%。',
         '各服务器的定数并排显示，和当前服务器不同的标成橙色；定数筛选、排序和 Rating 都按列表上方选的「服务器」。',
       ],
       chunithm: [
@@ -591,12 +595,12 @@
     return `<details class="help"><summary>计算说明</summary><ul>${[...common, ...per[g]].map((x) => `<li>${x}</li>`).join('')}</ul></details>`;
   }
   // 卡片页的难度选项：难度名 + 等级（定数）
-  function diffTab(c, on, i, s) {
+  function diffTab(c, on, i) {
     const G = GAMES[game];
     const v = view(c) || viewIn(c, 'all');
     const lv = c.d === 'worldsend' ? c.lv : v?.ds != null ? v.ds.toFixed(1) : v?.lv ?? '';
     return `<button class="dtab dt-${c.d} ${on ? 'on' : ''} ${view(c) ? '' : 'gone'}" role="tab" data-i="${i}">
-      <span class="full">${esc(G.diffs[c.d])}</span><span class="short">${esc(G.short[c.d])}</span><small>${esc(lv)}</small>${s && myTag(s, c) ? `<small class="myt">${esc(myTag(s, c))}</small>` : ''}</button>`;
+      <span class="full">${esc(G.diffs[c.d])}</span><span class="short">${esc(G.short[c.d])}</span><small>${esc(lv)}</small></button>`;
   }
   // 各服务器的等级 / 定数，和当前服务器不同的标出来
   function dsAcross(c) {
@@ -704,7 +708,7 @@
         </div>
       </div>
       <h3>谱面${GAMES[g].regions.length > 1 ? ` <span class="hint">定数和 Rating 按${SERVER[F.region] || '日服'}</span>` : ''}</h3>
-      <div class="dtabs" role="tablist">${charts.map((c, i) => diffTab(c, i === pick, i, s)).join('')}</div>
+      <div class="dtabs" role="tablist">${charts.map((c, i) => diffTab(c, i === pick, i)).join('')}</div>
       <div class="chartpanel">${chartCard(s, charts[pick])}</div>
       ${helpHtml(g)}`;
     v.querySelector('.dtabs').addEventListener('click', (e) => {
