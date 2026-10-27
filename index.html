@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>SBGA TOOL</title>
 <meta name="description" content="maimai DX / CHUNITHM / オンゲキ 曲目资料：版本、定数、谱师、物量、容错">
-<meta name="theme-color" content="#e0457b">
+<meta name="theme-color" content="#2f7fe0">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" type="image/png" href="icons/favicon.png">
 <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
@@ -16,7 +16,7 @@
 :root {
   --bg: #f6f7fb; --panel: #ffffff; --panel2: #f0f2f7; --line: #dfe3ec;
   --text: #1d2130; --sub: #646b80; --faint: #9aa0b2;
-  --accent: #e0457b; --accent-soft: #fde7ef;
+  --accent: #2f7fe0; --accent-soft: #e3effd;
   --bas: #22a559; --adv: #e8901a; --exp: #e5374f; --mas: #9b3fd9; --remas: #c792f2;
   --ult: #2b2b2b; --lun: #b8a200; --utage: #ff5fa2; --we: #3a3f52;
   --ok: #1f9d6b; --warn: #c27a00; --bad: #d03a3a;
@@ -37,14 +37,18 @@
   --accent-soft: #3a1f2b; --ult: #e6e6e6; --we: #c9cde0;
   --shadow: none; color-scheme: dark;
 }
-body[data-game="maimai"] { --accent: #e0457b; }
-body[data-game="chunithm"] { --accent: #d98a00; }
-body[data-game="ongeki"] { --accent: #7c5cf0; }
-@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) body[data-game="chunithm"] { --accent-soft: #3a2c10; } :root:not([data-theme="light"]) body[data-game="ongeki"] { --accent-soft: #2a2245; } }
+/* 各游戏的主题色：舞萌蓝、中二橙、音击粉 */
+body[data-game="maimai"] { --accent: #2f7fe0; --accent-soft: #e3effd; }
+body[data-game="chunithm"] { --accent: #d98a00; --accent-soft: #fdf0d6; }
+body[data-game="ongeki"] { --accent: #e0457b; --accent-soft: #fde7ef; }
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) body[data-game="maimai"] { --accent: #4a92ec; --accent-soft: #15283f; }
+  :root:not([data-theme="light"]) body[data-game="chunithm"] { --accent-soft: #3a2c10; }
+  :root:not([data-theme="light"]) body[data-game="ongeki"] { --accent-soft: #3a1f2b; }
+}
+:root[data-theme="dark"] body[data-game="maimai"] { --accent: #4a92ec; --accent-soft: #15283f; }
 :root[data-theme="dark"] body[data-game="chunithm"] { --accent-soft: #3a2c10; }
-:root[data-theme="dark"] body[data-game="ongeki"] { --accent-soft: #2a2245; }
-body[data-game="chunithm"] { --accent-soft: #fdf0d6; }
-body[data-game="ongeki"] { --accent-soft: #ece6ff; }
+:root[data-theme="dark"] body[data-game="ongeki"] { --accent-soft: #3a1f2b; }
 
 * { box-sizing: border-box; }
 html, body { margin: 0; }
