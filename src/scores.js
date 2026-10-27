@@ -1,0 +1,160 @@
+// 我的成绩：读取三个查分书签同步到 otoge-history 的历史记录（经由 otoge-sync 只读），算出每个谱面的最佳成绩
+// 历史记录的格式见 chuni-b50 / maimai-dx-score / ongeki-score-export 的「历史记录」一节：
+//   obs = 观测记录（src 'b' 成绩扫描 / 'p' プレイ履歴），每条有曲名 n、难度 d、分数（中二 / 音击 s，maimai a = 达成率×10000）和灯
+(function () {
+  const SYNC_URL = 'https://otoge-sync.131a562-index01.workers.dev';
+  const norm = (s) => String(s ?? '').normalize('NFKC').replace(/\s+/g, ' ').trim().toLowerCase();
+
+  // 同步名字的统一写法（和三个书签、查分面板的 cleanAccount 相同）：全角英数字转半角、英文字母转大写
+  const cleanAccount = (s) => String(s || '').normalize('NFKC').replace(/[a-z]/g, (c) => c.toUpperCase()).trim()
+    .replace(/[\\/:*?"<>|#%\u0000-\u001f]+/g, '_').replace(/\s+/g, ' ').replace(/^\.+/, '').slice(0, 40);
+  // chuni-b50 早期版本按原样保存名字（多为全角），读不到时再试一次
+  const legacyAccount = (s) => String(s || '').trim().replace(/[\\/:*?"<>|#%\u0000-\u001f]+/g, '_')
+    .replace(/\s+/g, ' ').replace(/^\.+/, '').slice(0, 40);
+
+  // 本地测试可以用 ?sync=http://localhost:xxxx 指到模拟服务（只接受 localhost，避免被别人的链接指到别的地方）
+  function syncUrl() {
+    const q = new URLSearchParams(location.search).get('sync');
+    return q && /^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?\/?$/.test(q) ? q.replace(/\/+$/, '') : SYNC_URL;
+  }
+
+  async function fetchHist(game, name) {
+    const tryName = async (n) => {
+      let res;
+      try { res = await fetch(`${syncUrl()}/${game}/${encodeURIComponent(n)}/raw`, { cache: 'no-store' }); }
+      catch { throw new Error('连不上同步服务'); }
+      if (res.status === 404) return null;
+      if (!res.ok) throw new Error('同步服务返回 HTTP ' + res.status);
+      const h = JSON.parse(await res.text());
+      if (!h || !Array.isArray(h.obs)) throw new Error('云端文件不是历史记录的格式');
+      return h;
+    };
+    const a = cleanAccount(name);
+    let h = await tryName(a);
+    if (!h && game === 'chunithm' && legacyAccount(name) !== a) h = await tryName(legacyAccount(name));
+    if (!h) throw new Error(`找不到「${a}」的记录（同步名字对吗？）`);
+    return h;
+  }
+
+  // 各游戏：记录里的难度 → 我们的难度；分数取法；灯的高低顺序
+  const GAME = {
+    chunithm: {
+      diff: (o) => ['basic', 'advanced', 'expert', 'master', 'ultima'][o.d],
+      score: (o) => o.s,
+      lamps: ['FC', 'AJ', 'AJC'],
+      lamp: (o) => o.l,
+    },
+    maimai: {
+      diff: (o) => ({ BASIC: 'basic', ADVANCED: 'advanced', EXPERT: 'expert', MASTER: 'master', 'Re:MASTER': 'remaster' })[o.d],
+      score: (o) => o.a,
+      lamps: ['FC', 'FC+', 'AP', 'AP+'],
+      lamp: (o) => o.fc,
+    },
+    ongeki: {
+      diff: (o) => ({ BASIC: 'basic', ADVANCED: 'advanced', EXPERT: 'expert', MASTER: 'master', LUNATIC: 'lunatic' })[o.d],
+      score: (o) => o.s,
+      lamps: ['FC', 'AB', 'AB+'],
+      lamp: (o) => o.l,
+    },
+  };
+
+  // 历史记录 → Map(「条目 id|难度」→ 最佳成绩)。songs = 网页的曲目数据（data/<游戏>.js 的 songs）
+  function build(game, hist, songs) {
+    const G = GAME[game];
+    // 曲名 → 条目（maimai 再分 DX / 标准；音击的 LUNATIC 可能在原曲里（Re:MASTER / LUNATIC 难度）或单独的 LUNATIC 条目）
+    const byTitle = new Map();
+    for (const s of songs) {
+      const k = norm(s.title);
+      if (!byTitle.has(k)) byTitle.set(k, []);
+      byTitle.get(k).push(s);
+    }
+    const best = new Map();
+    let total = 0, matched = 0;
+    const unmatched = new Set();
+    for (const o of hist.obs || []) {
+      const v = G.score(o);
+      if (v == null || v < 0) continue;
+      const d = G.diff(o);
+      if (!d) continue;
+      total++;
+      const target = locate(game, o, d, byTitle.get(norm(o.n)) || []);
+      if (!target) { unmatched.add(`${o.n}（${o.d}${o.kd ? ' ' + o.kd : ''}）`); continue; }
+      matched++;
+      const key = target.s.id + '|' + target.c.d;
+      const b = best.get(key) || { score: -1, lamp: '', n: 0 };
+      b.n++;
+      if (v > b.score) b.score = v;
+      const l = G.lamp(o);
+      if (l && G.lamps.indexOf(l) > G.lamps.indexOf(b.lamp)) b.lamp = l;
+      if (game === 'maimai') {
+        if (o.x > (b.dx || 0)) b.dx = o.x;
+        if (o.xm) b.dxMax = o.xm;
+        if (o.sy && (!b.sync || syncRank(o.sy) > syncRank(b.sync))) b.sync = o.sy;
+      }
+      if (game === 'ongeki') {
+        if (o.fb) b.fb = true;
+        if (o.ps > (b.ps || 0)) b.ps = o.ps;
+        if (o.pm) b.pm = o.pm;
+        if (o.st > (b.st || 0)) b.st = o.st;
+      }
+      if (!b.t || o.t > b.t) b.t = o.t;
+      best.set(key, b);
+    }
+    const last = (hist.obs || []).map((o) => o.t).sort().pop() || '';
+    return { best, total, matched, unmatched: [...unmatched], charts: best.size, last, player: hist.name || '' };
+  }
+  const SYNC_ORDER = ['SYNC', 'FS', 'FS+', 'FDX', 'FDX+'];
+  const syncRank = (x) => SYNC_ORDER.indexOf(x);
+
+  // 一条记录对应到哪个条目的哪个谱面
+  function locate(game, o, d, cands) {
+    if (!cands.length) return null;
+    const pick = (list) => {
+      for (const s of list) {
+        const c = s.charts.find((x) => x.d === d);
+        if (c) return { s, c };
+      }
+      return null;
+    };
+    if (game === 'maimai') {
+      const kd = o.kd === 'DX' ? 'dx' : o.kd === 'STD' ? 'std' : null;
+      if (kd) return pick(cands.filter((s) => s.type === kd));
+      // プレイ履歴里没认出 DX / 标准：只有一种有这个难度时归到它
+      const both = cands.filter((s) => (s.type === 'dx' || s.type === 'std') && s.charts.some((c) => c.d === d));
+      return both.length === 1 ? pick(both) : null;
+    }
+    if (game === 'chunithm') return pick(cands.filter((s) => s.type === 'std'));
+    // 音击：k 是「曲名|难度」，同名曲是「曲名|难度|艺术家」，分不出版本的是「…|?」（不算）
+    const extra = String(o.k || '').split('|')[2];
+    if (extra === '?') return null;
+    let list = extra ? cands.filter((s) => norm(s.artist).includes(norm(extra)) || norm(extra).includes(norm(s.artist))) : cands;
+    if (!list.length) list = cands;
+    if (d !== 'lunatic') return pick(list.filter((s) => s.type === 'std'));
+    // 游戏里 Re:MASTER 也显示在 LUNATIC 难度上：原曲的 Re:MASTER / LUNATIC 优先，其次是单独的 LUNATIC 条目（等级 0 的排最后）
+    const opts = [];
+    for (const s of list) for (const c of s.charts) if (c.d === 'remaster' || c.d === 'lunatic') opts.push({ s, c });
+    opts.sort((a, b) => (a.s.type === 'std' ? 0 : 1) - (b.s.type === 'std' ? 0 : 1) || (a.c.lv === '0') - (b.c.lv === '0'));
+    return opts[0] || null;
+  }
+
+  // 评级（从高到低）
+  const RANKS = {
+    maimai: [['SSS+', 1005000], ['SSS', 1000000], ['SS+', 995000], ['SS', 990000], ['S+', 980000], ['S', 970000], ['AAA', 940000], ['AA', 900000], ['A', 800000]],
+    chunithm: [['SSS+', 1009000], ['SSS', 1007500], ['SS+', 1005000], ['SS', 1000000], ['S+', 990000], ['S', 975000], ['AAA', 950000], ['AA', 925000], ['A', 900000]],
+    ongeki: [['SSS+', 1007500], ['SSS', 1000000], ['SS', 990000], ['S', 970000], ['AAA', 940000], ['AA', 900000], ['A', 850000]],
+  };
+  const rank = (game, v) => (RANKS[game].find(([, t]) => v >= t) || ['—'])[0];
+  // 下一个评级和还差多少（已经是最高评级时 null）
+  function next(game, v) {
+    const r = RANKS[game];
+    for (let i = r.length - 1; i >= 0; i--) if (v < r[i][1]) return { name: r[i][0], gap: r[i][1] - v };
+    return null;
+  }
+  const fmt = (game, v) => (game === 'maimai' ? (v / 10000).toFixed(4) + '%' : v.toLocaleString('en-US'));
+  const fmtGap = (game, g) => (game === 'maimai' ? (g / 10000).toFixed(4) + '%' : g.toLocaleString('en-US'));
+  // 「全连 / 理论」级别的灯（筛选「未 AJ」等用）
+  const TOP = { chunithm: ['AJ', 'AJC'], maimai: ['AP', 'AP+'], ongeki: ['AB', 'AB+'] };
+  const TOP_NAME = { chunithm: 'AJ', maimai: 'AP', ongeki: 'AB' };
+
+  window.Scores = { fetchHist, build, rank, next, fmt, fmtGap, RANKS, TOP, TOP_NAME, cleanAccount };
+})();

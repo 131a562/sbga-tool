@@ -31,7 +31,7 @@
   };
   const PAGE = 120;
   const FILTER_VERSION = 2; // 难度选项有变化时加 1（音击加了 Re:MASTER）
-  const SORTS = [['default', '默认（版本新→旧）'], ['ds', '定数'], ['title', '曲名'], ['notes', '物量'], ['bpm', 'BPM'], ['date', '实装日期']];
+  const SORTS = [['default', '默认（版本新→旧）'], ['ds', '定数'], ['title', '曲名'], ['notes', '物量'], ['bpm', 'BPM'], ['date', '实装日期'], ['my', '我的分数']];
   const cover = (s) => s.imgUrl || `https://dp4p6x0xfi5o9.cloudfront.net/${game}/img/cover/${s.img}`;
   const SERVER = { jp: '日服', intl: '国际服', cn: '国服' };
   const PLACEHOLDER = 'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 10 10"><rect width="10" height="10" fill="#8884"/></svg>');
@@ -146,7 +146,7 @@
   let listScroll = 0;
 
   function defaultFilter(g) {
-    return { fv: FILTER_VERSION, q: '', mode: 'fuzzy', scope: 'title', vers: [], types: GAMES[g].types.map((t) => t[0]), diffs: [...GAMES[g].high], dsMin: '', dsMax: '', est: true, cat: '', chara: '', region: 'jp', sort: 'default', desc: true };
+    return { fv: FILTER_VERSION, q: '', mode: 'fuzzy', scope: 'title', vers: [], types: GAMES[g].types.map((t) => t[0]), diffs: [...GAMES[g].high], dsMin: '', dsMax: '', est: true, cat: '', chara: '', my: '', region: 'jp', sort: 'default', desc: true };
   }
   function loadFilter(g) {
     const saved = store.get('songs.filter.' + g);
@@ -242,6 +242,7 @@
           const v = dsOf(c);
           if (v == null || (min != null && v < min - 1e-9) || (max != null && v > max + 1e-9)) continue;
         }
+        if (F.my && hasMine() && !myMatch(s, c)) continue;
         if (!hit || (dsOf(c) ?? 0) > (dsOf(hit) ?? 0)) hit = c;
       }
       if (!hit) continue;
@@ -267,6 +268,7 @@
       notes: (a, b) => dir * ((a.hit.notes.total ?? -1) - (b.hit.notes.total ?? -1)),
       bpm: (a, b) => dir * ((a.s.bpm ?? -1) - (b.s.bpm ?? -1)),
       date: (a, b) => dir * cmpStr(a.s.date, b.s.date),
+      my: (a, b) => dir * ((myBest(a.s, a.hit)?.score ?? -1) - (myBest(b.s, b.hit)?.score ?? -1)),
     };
     if (F.sort === 'default' && F.q && F.mode === 'fuzzy') out.sort((a, b) => b.score - a.score || by.default(a, b));
     else out.sort((a, b) => by[F.sort](a, b) || by.default(a, b));
@@ -282,6 +284,88 @@
       d._charas = [...n].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0], 'ja'));
     }
     return d._charas;
+  }
+
+  // ---- 我的成绩（查分书签同步的记录，见 src/scores.js） ----
+  const mine = {}; // 游戏 → { name, loading, err, res }
+  // 同步名字：自己填过的优先，没有就用查分面板（同一个网站）记住的名字
+  function acctName(g) {
+    const own = store.get('songs.account.' + g);
+    if (own != null) return own;
+    try { return (JSON.parse(localStorage.getItem('otoge-dash:names')) || {})[g] || ''; } catch { return ''; }
+  }
+  const myBest = (s, c) => mine[game]?.res?.best.get(s.id + '|' + c.d) || null;
+  const hasMine = () => !!mine[game]?.res;
+  async function loadScores(g, name) {
+    name = (name || '').trim();
+    if (!name) { delete mine[g]; if (g === game) { acctStatus(); refresh(); } return; }
+    mine[g] = { name, loading: true };
+    if (g === game) acctStatus();
+    try {
+      const hist = await Scores.fetchHist(g, name);
+      mine[g] = { name, res: Scores.build(g, hist, data[g].songs) };
+    } catch (e) {
+      mine[g] = { name, err: e.message };
+    }
+    if (g !== game) return;
+    acctStatus();
+    refresh();
+    if (!$('#detailView').hidden) route(); // 卡片页开着时也刷新
+  }
+  function acctStatus() {
+    const el = $('#acctStatus');
+    if (!el) return;
+    const m = mine[game];
+    el.classList.toggle('err', !!m?.err);
+    el.title = '';
+    if (!m) el.textContent = '填同步名字（查分书签里用的名字）后读取，谱面旁边会显示你的成绩';
+    else if (m.loading) el.textContent = '读取中…';
+    else if (m.err) el.textContent = m.err;
+    else {
+      const r = m.res;
+      el.textContent = `${r.charts} 个谱面有成绩，记录到 ${r.last.slice(0, 10)}` + (r.unmatched.length ? `；${r.unmatched.length} 个谱面对不上曲目数据` : '');
+      if (r.unmatched.length) el.title = '对不上的：\n' + r.unmatched.slice(0, 30).join('\n') + (r.unmatched.length > 30 ? '\n…' : '');
+    }
+    const sel = $('#my');
+    if (sel) sel.disabled = !hasMine();
+  }
+  // 「我的成绩」筛选：这个谱面符不符合
+  function myMatch(s, c) {
+    const b = myBest(s, c);
+    switch (F.my) {
+      case 'played': return !!b;
+      case 'unplayed': return !b;
+      case 'lt-sss': return !!b && b.score < Scores.RANKS[game].find(([n]) => n === 'SSS')[1];
+      case 'lt-sssp': return !!b && b.score < Scores.RANKS[game][0][1];
+      case 'nofc': return !!b && !b.lamp;
+      case 'notop': return !!b && !Scores.TOP[game].includes(b.lamp);
+      default: return true;
+    }
+  }
+  // 成绩的简短标记：评级 + 灯（列表上、难度按钮上用）
+  function myTag(s, c) {
+    const b = myBest(s, c);
+    if (!b) return '';
+    return Scores.rank(game, b.score) + (b.lamp ? '·' + b.lamp : '');
+  }
+  // 谱面卡里的「我的成绩」
+  function myHtml(s, c) {
+    if (!hasMine()) return '';
+    const b = myBest(s, c);
+    if (!b) return '<span>我的成绩</span><span class="na">没打过</span>';
+    const nx = Scores.next(game, b.score);
+    const extra = [];
+    if (game === 'maimai') {
+      if (b.sync) extra.push(b.sync);
+      if (b.dxMax) extra.push(`DX 分 ${fmt(b.dx || 0)} / ${fmt(b.dxMax)}`);
+    }
+    if (game === 'ongeki') {
+      if (b.fb) extra.push('FULL BELL');
+      if (b.pm) extra.push(`プラチナ ${fmt(b.ps || 0)} / ${fmt(b.pm)}${b.st ? `（${b.st >= 6 ? '虹★' : '★' + b.st}）` : ''}`);
+    }
+    return `<span>我的成绩</span><span class="mine"><b>${Scores.fmt(game, b.score)}</b> <span class="myr">${Scores.rank(game, b.score)}</span>${b.lamp ? ` <span class="myr lamp">${esc(b.lamp)}</span>` : ''}
+      ${extra.length ? `<span class="hint">${extra.map(esc).join('　')}</span>` : ''}
+      ${nx ? `<span class="hint">离 ${nx.name} 还差 ${Scores.fmtGap(game, nx.gap)}</span>` : ''}</span>`;
   }
 
   // ---- 筛选面板 ----
@@ -318,6 +402,15 @@
           <button class="icon-btn" id="dir" title="升序/降序">${F.desc ? '↓ 降序' : '↑ 升序'}</button></div>
         <button class="icon-btn" id="reset">重置筛选</button>
       </div>
+      <div class="frow">
+        <div class="fgroup"><span class="flabel">账号</span>
+          <input id="acct" type="text" placeholder="同步名字" value="${esc(mine[game]?.name ?? acctName(game))}" autocomplete="off">
+          <button class="icon-btn" id="acctLoad">读取成绩</button></div>
+        <div class="fgroup"><span class="flabel">我的成绩</span><select id="my">
+          ${[['', '全部'], ['played', '打过'], ['unplayed', '没打过'], ['lt-sssp', '打过、未达 SSS+'], ['lt-sss', '打过、未达 SSS'], ['nofc', '打过、未 FC'], ['notop', `打过、未 ${Scores.TOP_NAME[game]}`]]
+            .map(([v, n]) => `<option value="${v}" ${F.my === v ? 'selected' : ''}>${n}</option>`).join('')}</select></div>
+        <span class="hint" id="acctStatus"></span>
+      </div>
       <details class="vers" ${F.vers.length ? 'open' : ''}>
         <summary>版本${F.vers.length ? `（已选 ${F.vers.length} 个）` : '（全部）'}</summary>
         <div class="chips" id="vers">${chips(vers, F.vers, 'ver')}<button class="chip ghost" id="verLatest">只看最新版本</button><button class="chip ghost" id="verClear">清空</button></div>
@@ -326,6 +419,7 @@
     $('#region').value = F.region;
     $('#sort').value = F.sort;
     $('#dir').disabled = F.sort === 'default';
+    acctStatus();
   }
 
   function bindFilters() {
@@ -338,13 +432,14 @@
     });
     f.addEventListener('change', (e) => {
       const id = e.target.id;
-      if (['scope', 'cat', 'chara', 'region', 'sort'].includes(id)) F[id] = e.target.value;
+      if (['scope', 'cat', 'chara', 'region', 'sort', 'my'].includes(id)) F[id] = e.target.value;
       else if (id === 'est') F.est = e.target.checked;
       else return;
       if (id === 'sort') $('#dir').disabled = F.sort === 'default';
       if (id === 'region') { F.vers = []; renderFilters(); } // 国服的版本名不一样
       refresh();
     });
+    f.addEventListener('keydown', (e) => { if (e.target.id === 'acct' && e.key === 'Enter') $('#acctLoad').click(); });
     f.addEventListener('click', (e) => {
       const b = e.target.closest('button');
       if (!b) return;
@@ -366,6 +461,12 @@
       }
       else if (b.id === 'dir') { F.desc = !F.desc; b.textContent = F.desc ? '↓ 降序' : '↑ 升序'; }
       else if (b.id === 'reset') { F = defaultFilter(game); renderFilters(); }
+      else if (b.id === 'acctLoad') {
+        const name = $('#acct').value.trim();
+        store.set('songs.account.' + game, name);
+        loadScores(game, name);
+        return;
+      }
       else return;
       refresh();
     });
@@ -373,13 +474,14 @@
   const updVerSummary = () => { $('#filters summary').textContent = `版本${F.vers.length ? `（已选 ${F.vers.length} 个）` : '（全部）'}`; };
 
   // ---- 列表 ----
-  function lvChip(c, dim) {
+  function lvChip(c, dim, s) {
     const G = GAMES[game];
     const v = view(c);
     if (!v) return '';
     const ds = v.ds != null ? v.ds.toFixed(1) : v.ref != null ? '~' + v.ref.toFixed(1) : noConst(c, v) || c.d === 'utage' ? '' : '?';
     const label = c.d === 'worldsend' ? c.lv : c.d === 'utage' ? `宴 ${v.lv}` : `${G.short[c.d]} ${v.lv}`;
-    return `<span class="lv d-${c.d} ${dim ? 'dim' : ''}">${esc(label)}${ds ? `<span class="ds">${ds}</span>` : ''}</span>`;
+    const tag = s ? myTag(s, c) : '';
+    return `<span class="lv d-${c.d} ${dim ? 'dim' : ''}">${esc(label)}${ds ? `<span class="ds">${ds}</span>` : ''}${tag ? `<span class="myt">${esc(tag)}</span>` : ''}</span>`;
   }
   function typeBadge(s) {
     if (game === 'maimai') return s.type === 'dx' ? '<span class="badge b-dx">DX</span>' : s.type === 'std' ? '<span class="badge b-std">STD</span>' : `<span class="badge b-utage">宴·${esc(s.kanji)}${s.buddy ? '·双人' : ''}</span>`;
@@ -394,7 +496,7 @@
     const lvs = charts.map((c) => {
       const v = dsOf(c);
       const inRange = F.diffs.includes(c.d) && (min == null || (v != null && v >= min - 1e-9)) && (max == null || (v != null && v <= max + 1e-9));
-      return lvChip(c, !inRange);
+      return lvChip(c, !inRange, s);
     }).join('');
     return `<a class="card" href="#/${game}/song/${encodeURIComponent(s.id)}">
       <img class="jk" crossorigin="anonymous" loading="lazy" src="${cover(s)}" onerror="this.onerror=null;this.src='${PLACEHOLDER}'" alt="">
@@ -489,12 +591,12 @@
     return `<details class="help"><summary>计算说明</summary><ul>${[...common, ...per[g]].map((x) => `<li>${x}</li>`).join('')}</ul></details>`;
   }
   // 卡片页的难度选项：难度名 + 等级（定数）
-  function diffTab(c, on, i) {
+  function diffTab(c, on, i, s) {
     const G = GAMES[game];
     const v = view(c) || viewIn(c, 'all');
     const lv = c.d === 'worldsend' ? c.lv : v?.ds != null ? v.ds.toFixed(1) : v?.lv ?? '';
     return `<button class="dtab dt-${c.d} ${on ? 'on' : ''} ${view(c) ? '' : 'gone'}" role="tab" data-i="${i}">
-      <span class="full">${esc(G.diffs[c.d])}</span><span class="short">${esc(G.short[c.d])}</span><small>${esc(lv)}</small></button>`;
+      <span class="full">${esc(G.diffs[c.d])}</span><span class="short">${esc(G.short[c.d])}</span><small>${esc(lv)}</small>${s && myTag(s, c) ? `<small class="myt">${esc(myTag(s, c))}</small>` : ''}</button>`;
   }
   // 各服务器的等级 / 定数，和当前服务器不同的标出来
   function dsAcross(c) {
@@ -533,6 +635,7 @@
       <div class="chart-b">
         <div class="kv">
           ${nc ? `<span>等级</span><span>${esc(c.d === 'worldsend' ? c.lv : v.lv)}</span>` : `<span>${c.d === 'utage' ? '等级' : '定数'}</span><span>${dsAcross(c)}</span>`}
+          ${myHtml(s, c)}
           <span>谱师</span><span>${c.des ? esc(c.des) : '<span class="na">未知</span>'}</span>
           ${c.link ? `<span>谱面</span><span><a href="https://sdvx.in/${game}/${esc(c.link)}.htm" target="_blank" rel="noopener">谱面确认（sdvx.in）↗</a></span>` : ''}
           ${c.ver && c.ver !== s.ver ? `<span>追加版本</span><span>${esc(c.ver)}</span>` : ''}
@@ -601,7 +704,7 @@
         </div>
       </div>
       <h3>谱面${GAMES[g].regions.length > 1 ? ` <span class="hint">定数和 Rating 按${SERVER[F.region] || '日服'}</span>` : ''}</h3>
-      <div class="dtabs" role="tablist">${charts.map((c, i) => diffTab(c, i === pick, i)).join('')}</div>
+      <div class="dtabs" role="tablist">${charts.map((c, i) => diffTab(c, i === pick, i, s)).join('')}</div>
       <div class="chartpanel">${chartCard(s, charts[pick])}</div>
       ${helpHtml(g)}`;
     v.querySelector('.dtabs').addEventListener('click', (e) => {
@@ -634,6 +737,7 @@
       const d = data[g];
       $('#dataTime').textContent = `数据 ${d.sourceTime ? d.sourceTime.slice(0, 10) : d.generated.slice(0, 10)}`;
       refresh();
+      if (!mine[g] && acctName(g)) loadScores(g, acctName(g));
     }
     if (showList) {
       document.title = `${GAMES[g].name} - SBGA TOOL`;

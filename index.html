@@ -154,6 +154,14 @@ table.tol th:first-child, table.tol td:first-child { text-align: left; }
 table.tol th { color: var(--faint); font-weight: 600; font-size: 12px; }
 table.tol td.rk { font-weight: 800; }
 .hint { color: var(--faint); font-size: 12px; }
+#acctStatus.err { color: var(--bad); }
+#acct { border: 1px solid var(--line); border-radius: 8px; padding: 6px 8px; background: var(--panel); width: 160px; }
+.lv .myt { margin-left: 4px; padding-left: 4px; border-left: 1px solid rgba(255,255,255,.5); font-weight: 800; }
+.dtab .myt { font-weight: 800; }
+.mine { display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px 8px; }
+.mine b { font-size: 15px; font-variant-numeric: tabular-nums; }
+.myr { font-weight: 800; color: var(--accent); }
+.myr.lamp { color: var(--ok); }
 .nw0 { white-space: nowrap; }
 .artist.a-body { display: none; }
 .nw { white-space: nowrap; margin-right: 8px; }
@@ -232,6 +240,7 @@ footer { color: var(--faint); font-size: 12px; padding: 20px 0 40px; }
 </main>
 <footer class="wrap">数据来源：<a href="https://arcade-songs.zetaraku.dev/" target="_blank" rel="noopener">arcade-songs</a>（曲目、版本、定数、谱师、物量）、<a href="https://otoge-db.net/" target="_blank" rel="noopener">otoge-db</a>（宴谱 / WORLD'S END / LUNATIC 的物量和谱师、wiki 链接、音击角色）、<a href="https://maimai.lxns.net/" target="_blank" rel="noopener">落雪查分器</a>（国服）、<a href="https://github.com/zkldi/Tachi" target="_blank" rel="noopener">Tachi</a>（音击参考定数、Re:MASTER 分类）。</footer>
 <script src="src/calc.js"></script>
+<script src="src/scores.js"></script>
 <script src="src/app.js"></script>
 </body>
 </html>

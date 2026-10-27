@@ -2,7 +2,7 @@
 //   - 网页本身和三个游戏的数据：先用缓存显示，同时在后台下载新版本，下次打开就是新的
 //   - 曲绘：看过的存起来（最多 COVER_MAX 张），没网时也能显示
 // 改了缓存的文件列表或策略时，把 VERSION 加 1，旧缓存会被清掉
-const VERSION = 'v2';
+const VERSION = 'v3';
 const SHELL = `shell-${VERSION}`;
 const COVERS = 'covers';
 const COVER_MAX = 800;
@@ -11,6 +11,7 @@ const FILES = [
   'index.html',
   'src/app.js',
   'src/calc.js',
+  'src/scores.js',
   'data/maimai.js',
   'data/chunithm.js',
   'data/ongeki.js',
