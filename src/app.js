@@ -4,6 +4,7 @@
     maimai: {
       name: 'maimai DX',
       types: [['std', '标准'], ['dx', 'DX'], ['utage', '宴']],
+      typeChips: ['std', 'dx'], // 「种类」只分标准 / DX：宴谱用「难度」里的 宴 就能筛
       diffs: { basic: 'BASIC', advanced: 'ADVANCED', expert: 'EXPERT', master: 'MASTER', remaster: 'Re:MASTER', utage: '宴' },
       short: { basic: 'BAS', advanced: 'ADV', expert: 'EXP', master: 'MAS', remaster: 'ReM', utage: '宴' },
       high: ['expert', 'master', 'remaster', 'utage'],
@@ -13,7 +14,7 @@
     chunithm: {
       name: 'CHUNITHM',
       types: [['std', '通常'], ['we', "WORLD'S END"]],
-      noTypeFilter: true, // 不显示「种类」：WORLD'S END 条目用「难度」里的 WORLD'S END 就能筛
+      // 没有 typeChips = 不显示「种类」：WORLD'S END 条目用「难度」里的 WORLD'S END 就能筛
       diffs: { basic: 'BASIC', advanced: 'ADVANCED', expert: 'EXPERT', master: 'MASTER', ultima: 'ULTIMA', worldsend: "WORLD'S END" },
       short: { basic: 'BAS', advanced: 'ADV', expert: 'EXP', master: 'MAS', ultima: 'ULT', worldsend: 'WE' },
       high: ['expert', 'master', 'ultima', 'worldsend'],
@@ -23,7 +24,7 @@
     ongeki: {
       name: 'オンゲキ',
       types: [['std', '通常'], ['lun', 'LUNATIC']],
-      noTypeFilter: true, // 不显示「种类」：LUNATIC 条目用「难度」里的 LUNATIC 就能筛
+      // 没有 typeChips = 不显示「种类」：LUNATIC 条目用「难度」里的 LUNATIC 就能筛
       diffs: { basic: 'BASIC', advanced: 'ADVANCED', expert: 'EXPERT', master: 'MASTER', remaster: 'Re:MASTER', lunatic: 'LUNATIC' },
       short: { basic: 'BAS', advanced: 'ADV', expert: 'EXP', master: 'MAS', remaster: 'ReM', lunatic: 'LUN' },
       high: ['expert', 'master', 'remaster', 'lunatic'],
@@ -238,7 +239,7 @@
     };
     const out = [];
     for (const s of d.songs) {
-      if (!GAMES[game].noTypeFilter && !types.has(s.type)) continue;
+      if (GAMES[game].typeChips?.includes(s.type) && !types.has(s.type)) continue;
       if (vers.size && !vers.has(verOf(s))) continue;
       if (F.cat && s.cat !== F.cat) continue;
       if (F.chara && s.chara !== F.chara) continue;
@@ -418,7 +419,7 @@
         <div class="fgroup"><span class="flabel">难度</span><div class="fctl chips" id="diffs">${chips(G.high.map((k) => [k, G.short[k], G.diffs[k]]), F.diffs, 'diff')}</div></div>
       </div>
       <div class="frow">
-        ${G.noTypeFilter ? '' : `<div class="fgroup"><span class="flabel">种类</span><div class="fctl chips" id="types">${chips(G.types, F.types, 'type')}</div></div>`}
+        ${!G.typeChips ? '' : `<div class="fgroup"><span class="flabel">种类</span><div class="fctl chips" id="types">${chips(G.types.filter(([t]) => G.typeChips.includes(t)), F.types, 'type')}</div></div>`}
         <div class="fgroup"><span class="flabel">分类</span><div class="fctl"><select id="cat"><option value="">全部</option>${d.categories.map((c) => `<option ${F.cat === c ? 'selected' : ''}>${esc(c)}</option>`).join('')}</select></div></div>
         ${game === 'ongeki' ? `<div class="fgroup"><span class="flabel">对手</span><div class="fctl"><select id="chara"><option value="">全部</option>${charaList(d).map(([c, n]) => `<option value="${esc(c)}" ${F.chara === c ? 'selected' : ''}>${esc(c)}（${n}）</option>`).join('')}</select></div></div>` : ''}
         <div class="fgroup"><span class="flabel" title="只看这个服务器现在有的曲目，定数、等级、版本也按这个服务器显示">服务器</span><div class="fctl"><select id="region">${G.regions.map(([v, n]) => `<option value="${v}">${n}</option>`).join('')}<option value="all">全部（含已删除）</option></select></div></div>
@@ -457,7 +458,7 @@
     if (F.q.trim()) on.push(`「${F.q.trim()}」`);
     if (F.dsMin !== '' || F.dsMax !== '') on.push(`定数 ${F.dsMin || '…'}–${F.dsMax || '…'}`);
     if (F.diffs.length !== d0.diffs.length) on.push(F.diffs.map((k) => G.short[k]).join('/') || '无难度');
-    if (F.types.length !== d0.types.length) on.push('种类');
+    if (G.typeChips?.some((t) => !F.types.includes(t))) on.push(G.types.filter(([t]) => F.types.includes(t) && G.typeChips.includes(t)).map(([, n]) => n).join('/') || '无种类');
     if (F.vers.length) on.push(F.vers.length === 1 ? F.vers[0] : `${F.vers.length} 个版本`);
     if (F.cat) on.push(F.cat);
     if (F.chara) on.push(F.chara);
