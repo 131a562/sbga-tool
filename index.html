@@ -67,6 +67,9 @@ h1 { font-size: 17px; margin: 0; white-space: nowrap; }
 .frow { display: flex; flex-wrap: wrap; gap: 10px 18px; align-items: center; }
 .flabel { color: var(--sub); font-size: 12px; font-weight: 600; min-width: 36px; }
 .fgroup { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.fctl { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; min-width: 0; }
+.range { display: inline-flex; align-items: center; gap: 4px; }
+.fbar, .m-only { display: none; }
 .search { display: flex; flex: 1 1 360px; min-width: 0; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; background: var(--panel); }
 .search input { flex: 1; min-width: 0; border: 0; padding: 8px 10px; background: transparent; outline: none; }
 .search:focus-within { border-color: var(--accent); }
@@ -227,13 +230,37 @@ footer { color: var(--faint); font-size: 12px; padding: 20px 0 40px; }
   table.tol { font-size: 12px; }
   table.tol th, table.tol td { padding: 4px 3px; }
   .plat { grid-template-columns: repeat(3, minmax(0, 1fr)); }
-  .lampg { flex-wrap: wrap; }
-  .lampsl { width: min(300px, calc(100vw - 100px)); }
   .dtabs { gap: 4px; }
   .dtab { padding: 4px 2px; font-size: 12px; }
   .dtab .full { display: none; }
   .dtab .short { display: inline; }
   .grid { grid-template-columns: 1fr; }
+  /* 手机上的筛选：默认收起，点「搜索」展开；每项「标签 | 控件」一行，控件在右边一栏里换行 */
+  .fbar { display: flex; align-items: center; gap: 10px; margin: 12px 0 10px; }
+  .fbar .icon-btn { padding: 7px 12px; color: var(--text); font-weight: 600; flex: none; }
+  .fbar .icon-btn.on { border-color: var(--accent); color: var(--accent); }
+  .fbar .fn { display: inline-block; min-width: 18px; margin-left: 6px; padding: 0 5px; border-radius: 999px; background: var(--accent); color: #fff; font-size: 11px; line-height: 18px; text-align: center; }
+  .fsum { color: var(--sub); font-size: 12px; line-height: 1.4; min-width: 0; overflow: hidden; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; }
+  .filters { display: none; margin: 0 0 12px; padding: 12px; gap: 10px; }
+  .filters.open { display: grid; grid-template-columns: minmax(0, 1fr); }
+  .pc-only { display: none; }
+  .m-only { display: flex; }
+  .frow { flex-direction: column; align-items: stretch; gap: 10px; }
+  .frow > * { min-width: 0; max-width: 100%; }
+  .search { flex: none; }
+  .fgroup { flex-wrap: nowrap; align-items: flex-start; gap: 10px; }
+  .fgroup > .flabel { flex: 0 0 4.2em; min-width: 0; padding-top: 7px; }
+  .fgroup > .fctl { flex: 1; }
+  .fgroup > .fctl.chips { padding-top: 3px; }
+  .fctl select { flex: 1; min-width: 0; max-width: 100%; }
+  .fctl .range { flex: 1 1 100%; min-width: 0; }
+  .fctl .range input { flex: 1; min-width: 0; width: auto; }
+  #acct { flex: 1; min-width: 0; width: auto; }
+  .lampg { flex-wrap: wrap; align-items: center; }
+  .lampsl { width: 100%; }
+  #acctStatus:empty, #err:empty { display: none; }
+  .fact { flex-direction: row; justify-content: flex-end; gap: 8px; border-top: 1px solid var(--line); padding-top: 10px; }
+  .fact .on { border-color: var(--accent); background: var(--accent); color: #fff; }
 }
 </style>
 </head>
@@ -251,6 +278,7 @@ footer { color: var(--faint); font-size: 12px; padding: 20px 0 40px; }
 </header>
 <main class="wrap">
   <section id="listView">
+    <div class="fbar" id="fbar"><button class="icon-btn" id="fToggle">🔍 搜索</button><span class="fsum" id="fSum"></span></div>
     <div class="filters" id="filters"></div>
     <div class="count" id="count"></div>
     <div class="grid" id="grid"></div>

@@ -389,6 +389,10 @@
   }
 
   // ---- 筛选面板 ----
+  // 搜索框的提示：手机上放不下长句，只写短的
+  const qHint = () => (matchMedia('(max-width: 640px)').matches
+    ? (F.mode === 'regex' ? '例：ら__ら、love*song' : '曲名 / 读音')
+    : F.mode === 'regex' ? '_ = 一个非空格字符，* = 一个以上非空格字符，例如 ら__ら、love*song' : '曲名 / 读音（片假名=平假名，忽略符号；不跨单词；用空格隔开可以搜几个词）');
   function renderFilters() {
     const G = GAMES[game], d = data[game];
     const chips = (items, sel, attr) => items.map(([v, n]) => `<button class="chip ${sel.includes(v) ? 'on' : ''}" data-${attr}="${esc(v)}">${esc(n)}</button>`).join('');
@@ -397,52 +401,73 @@
     $('#filters').innerHTML = `
       <div class="frow">
         <div class="search">
-          <input id="q" type="search" placeholder="${F.mode === 'regex' ? '_ = 一个非空格字符，* = 一个以上非空格字符，例如 ら__ら、love*song' : '曲名 / 读音（片假名=平假名，忽略符号；不跨单词；用空格隔开可以搜几个词）'}" value="${esc(F.q)}" autocomplete="off">
+          <input id="q" type="search" placeholder="${qHint()}" value="${esc(F.q)}" autocomplete="off">
           <div class="seg" id="mode"><button data-v="fuzzy" class="${F.mode === 'fuzzy' ? 'on' : ''}">模糊</button><button data-v="regex" class="${F.mode === 'regex' ? 'on' : ''}">正则</button></div>
         </div>
-        <div class="fgroup"><span class="flabel">搜索</span>
+        <div class="fgroup"><span class="flabel">搜索</span><div class="fctl">
           <select id="scope"><option value="title">曲名</option><option value="artist">艺术家</option><option value="designer">谱师</option></select>
-        </div>
+        </div></div>
         <span class="err" id="err"></span>
       </div>
       <div class="frow">
-        <div class="fgroup"><span class="flabel">定数</span>
-          <input id="dsMin" type="number" step="0.1" min="1" max="16" placeholder="最低" value="${esc(F.dsMin)}"> –
-          <input id="dsMax" type="number" step="0.1" min="1" max="16" placeholder="最高" value="${esc(F.dsMax)}">
+        <div class="fgroup"><span class="flabel">定数</span><div class="fctl">
+          <span class="range"><input id="dsMin" type="number" step="0.1" min="1" max="16" placeholder="最低" value="${esc(F.dsMin)}"> –
+          <input id="dsMax" type="number" step="0.1" min="1" max="16" placeholder="最高" value="${esc(F.dsMax)}"></span>
           <label class="chk" title="定数还没公开的谱面${game === 'ongeki' ? '，有参考定数的用参考定数，没有的' : ''}按等级估算（13+ ≈ ${game === 'chunithm' ? '13.5' : '13.7'}）"><input type="checkbox" id="est" ${F.est ? 'checked' : ''}>未公开的按${game === 'ongeki' ? '参考值/' : ''}等级估</label>
-        </div>
-        <div class="fgroup"><span class="flabel">难度</span><div class="chips" id="diffs">${chips(G.high.map((k) => [k, G.diffs[k]]), F.diffs, 'diff')}</div></div>
+        </div></div>
+        <div class="fgroup"><span class="flabel">难度</span><div class="fctl chips" id="diffs">${chips(G.high.map((k) => [k, G.diffs[k]]), F.diffs, 'diff')}</div></div>
       </div>
       <div class="frow">
-        ${G.noTypeFilter ? '' : `<div class="fgroup"><span class="flabel">种类</span><div class="chips" id="types">${chips(G.types, F.types, 'type')}</div></div>`}
-        <div class="fgroup"><span class="flabel">分类</span><select id="cat"><option value="">全部</option>${d.categories.map((c) => `<option ${F.cat === c ? 'selected' : ''}>${esc(c)}</option>`).join('')}</select></div>
-        ${game === 'ongeki' ? `<div class="fgroup"><span class="flabel">对手</span><select id="chara"><option value="">全部</option>${charaList(d).map(([c, n]) => `<option value="${esc(c)}" ${F.chara === c ? 'selected' : ''}>${esc(c)}（${n}）</option>`).join('')}</select></div>` : ''}
-        <div class="fgroup"><span class="flabel" title="只看这个服务器现在有的曲目，定数、等级、版本也按这个服务器显示">服务器</span><select id="region">${G.regions.map(([v, n]) => `<option value="${v}">${n}</option>`).join('')}<option value="all">全部（含已删除）</option></select></div>
-        <div class="fgroup"><span class="flabel">排序</span><select id="sort">${SORTS.map(([v, n]) => `<option value="${v}">${n}</option>`).join('')}</select>
-          <button class="icon-btn" id="dir" title="升序/降序">${F.desc ? '↓ 降序' : '↑ 升序'}</button></div>
-        <button class="icon-btn" id="reset">重置筛选</button>
+        ${G.noTypeFilter ? '' : `<div class="fgroup"><span class="flabel">种类</span><div class="fctl chips" id="types">${chips(G.types, F.types, 'type')}</div></div>`}
+        <div class="fgroup"><span class="flabel">分类</span><div class="fctl"><select id="cat"><option value="">全部</option>${d.categories.map((c) => `<option ${F.cat === c ? 'selected' : ''}>${esc(c)}</option>`).join('')}</select></div></div>
+        ${game === 'ongeki' ? `<div class="fgroup"><span class="flabel">对手</span><div class="fctl"><select id="chara"><option value="">全部</option>${charaList(d).map(([c, n]) => `<option value="${esc(c)}" ${F.chara === c ? 'selected' : ''}>${esc(c)}（${n}）</option>`).join('')}</select></div></div>` : ''}
+        <div class="fgroup"><span class="flabel" title="只看这个服务器现在有的曲目，定数、等级、版本也按这个服务器显示">服务器</span><div class="fctl"><select id="region">${G.regions.map(([v, n]) => `<option value="${v}">${n}</option>`).join('')}<option value="all">全部（含已删除）</option></select></div></div>
+        <div class="fgroup"><span class="flabel">排序</span><div class="fctl"><select id="sort">${SORTS.map(([v, n]) => `<option value="${v}">${n}</option>`).join('')}</select>
+          <button class="icon-btn" id="dir" title="升序/降序">${F.desc ? '↓ 降序' : '↑ 升序'}</button></div></div>
+        <button class="icon-btn pc-only" id="reset">重置筛选</button>
       </div>
       <div class="frow">
-        <div class="fgroup"><span class="flabel">账号</span>
+        <div class="fgroup"><span class="flabel">账号</span><div class="fctl">
           <input id="acct" type="text" placeholder="同步名字" value="${esc(mine[game]?.name ?? acctName(game))}" autocomplete="off">
-          <button class="icon-btn" id="acctLoad">读取成绩</button></div>
+          <button class="icon-btn" id="acctLoad">读取成绩</button></div></div>
         <div class="fgroup lampg">${lampSliderHtml()}<span class="hint" id="lampTxt"></span>${game === 'ongeki' ? fbBtnHtml() : ''}</div>
-        <div class="fgroup"><span class="flabel">我的分数</span>
-          <input id="myMin" class="myin" type="text" inputmode="decimal" placeholder="${game === 'maimai' ? '最低 例 100' : '最低 例 1000000'}" value="${esc(F.myMin)}"> –
-          <input id="myMax" class="myin" type="text" inputmode="decimal" placeholder="${game === 'maimai' ? '最高 例 100.4999' : '最高 例 1007499'}" value="${esc(F.myMax)}">
-          ${game === 'maimai' ? '<span class="hint">%</span>' : ''}</div>
+        <div class="fgroup"><span class="flabel">我的分数</span><div class="fctl">
+          <span class="range"><input id="myMin" class="myin" type="text" inputmode="decimal" placeholder="${game === 'maimai' ? '最低 例 100' : '最低 例 1000000'}" value="${esc(F.myMin)}"> –
+          <input id="myMax" class="myin" type="text" inputmode="decimal" placeholder="${game === 'maimai' ? '最高 例 100.4999' : '最高 例 1007499'}" value="${esc(F.myMax)}">${game === 'maimai' ? '<span class="hint">%</span>' : ''}</span></div></div>
         <span class="hint" id="acctStatus"></span>
       </div>
       <details class="vers" ${F.vers.length ? 'open' : ''}>
         <summary>版本${F.vers.length ? `（已选 ${F.vers.length} 个）` : '（全部）'}</summary>
         <div class="chips" id="vers">${chips(vers, F.vers, 'ver')}<button class="chip ghost" id="verLatest">只看最新版本</button><button class="chip ghost" id="verClear">清空</button></div>
-      </details>`;
+      </details>
+      <div class="frow m-only fact"><button class="icon-btn" id="resetM">重置筛选</button><button class="icon-btn on" id="fClose">完成</button></div>`;
     $('#scope').value = F.scope;
     $('#region').value = F.region;
     $('#sort').value = F.sort;
     $('#dir').disabled = F.sort === 'default';
     acctStatus();
     lampSliderSync();
+    fbarSync();
+  }
+
+  // 手机上筛选面板默认收起：外面只有「搜索」按钮 + 现在生效的条件摘要
+  let fOpen = false;
+  function fbarSync() {
+    const G = GAMES[game], d0 = defaultFilter(game), on = [];
+    if (F.q.trim()) on.push(`「${F.q.trim()}」`);
+    if (F.dsMin !== '' || F.dsMax !== '') on.push(`定数 ${F.dsMin || '…'}–${F.dsMax || '…'}`);
+    if (F.diffs.length !== d0.diffs.length) on.push(F.diffs.map((k) => G.short[k]).join('/') || '无难度');
+    if (F.types.length !== d0.types.length) on.push('种类');
+    if (F.vers.length) on.push(F.vers.length === 1 ? F.vers[0] : `${F.vers.length} 个版本`);
+    if (F.cat) on.push(F.cat);
+    if (F.chara) on.push(F.chara);
+    if (F.region !== 'jp') on.push(F.region === 'all' ? '全部服务器' : (G.regions.find(([v]) => v === F.region) || [0, F.region])[1]);
+    if (hasMine() && (lampOn() || F.fb || F.myMin !== '' || F.myMax !== '')) on.push('我的成绩');
+    if (F.sort !== 'default') on.push('按' + SORTS.find(([v]) => v === F.sort)[1] + (F.desc ? '↓' : '↑'));
+    $('#fSum').textContent = on.length ? on.join(' · ') : '全部曲目';
+    $('#fToggle').classList.toggle('on', fOpen);
+    $('#fToggle').innerHTML = `${fOpen ? '▲' : '🔍'} 搜索${on.length ? `<span class="fn">${on.length}</span>` : ''}`;
+    $('#filters').classList.toggle('open', fOpen);
   }
 
   // 灯的滑槽：两个滑块选一个范围（左边的滑块 = 最低，右边 = 最高），默认整条 = 不限
@@ -472,6 +497,10 @@
 
   function bindFilters() {
     const f = $('#filters');
+    $('#fToggle').addEventListener('click', () => {
+      fOpen = !fOpen;
+      fbarSync();
+    });
     let t;
     f.addEventListener('input', (e) => {
       const id = e.target.id;
@@ -503,7 +532,7 @@
       if (b.parentElement.id === 'mode') {
         F.mode = b.dataset.v;
         for (const x of b.parentElement.children) x.classList.toggle('on', x === b);
-        $('#q').placeholder = F.mode === 'regex' ? '_ = 一个非空格字符，* = 一个以上非空格字符，例如 ら__ら、love*song' : '曲名 / 读音（片假名=平假名，忽略符号；不跨单词；用空格隔开可以搜几个词）';
+        $('#q').placeholder = qHint();
         $('#q').focus();
       } else if (b.dataset.diff) { F.diffs = toggle(F.diffs, b.dataset.diff); b.classList.toggle('on'); }
       else if (b.dataset.type) { F.types = toggle(F.types, b.dataset.type); b.classList.toggle('on'); }
@@ -516,7 +545,8 @@
         renderFilters();
       }
       else if (b.id === 'dir') { F.desc = !F.desc; b.textContent = F.desc ? '↓ 降序' : '↑ 升序'; }
-      else if (b.id === 'reset') { F = defaultFilter(game); renderFilters(); }
+      else if (b.id === 'reset' || b.id === 'resetM') { F = defaultFilter(game); renderFilters(); }
+      else if (b.id === 'fClose') { fOpen = false; fbarSync(); $('#fbar').scrollIntoView({ block: 'nearest' }); return; }
       else if (b.id === 'fb') { F.fb = F.fb === '' ? 'yes' : F.fb === 'yes' ? 'no' : ''; b.textContent = fbText(); b.classList.toggle('on', !!F.fb); }
       else if (b.id === 'acctLoad') {
         const name = $('#acct').value.trim();
@@ -567,6 +597,7 @@
     saveFilter();
     results = filterSongs();
     $('#err').textContent = F._err || '';
+    fbarSync();
     shown = 0;
     $('#grid').innerHTML = '';
     const d = data[game];
