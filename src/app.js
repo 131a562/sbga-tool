@@ -496,7 +496,7 @@
     const lvs = charts.map((c) => {
       const v = dsOf(c);
       const inRange = F.diffs.includes(c.d) && (min == null || (v != null && v >= min - 1e-9)) && (max == null || (v != null && v <= max + 1e-9));
-      return lvChip(c, !inRange, s);
+      return lvChip(c, !inRange);
     }).join('');
     return `<a class="card" href="#/${game}/song/${encodeURIComponent(s.id)}">
       <img class="jk" crossorigin="anonymous" loading="lazy" src="${cover(s)}" onerror="this.onerror=null;this.src='${PLACEHOLDER}'" alt="">
