@@ -368,7 +368,7 @@
       }
     }
     if (game === 'ongeki') {
-      if (b.fb) extra.push('FULL BELL');
+      if (b.fb) extra.push('FB');
       if (b.pm) extra.push(`プラチナ ${fmt(b.ps || 0)} / ${fmt(b.pm)}${b.st ? `（${b.st >= 6 ? '虹★' : '★' + b.st}）` : ''}`);
     }
     return `<span>我的成绩</span><span class="mine"><b>${Scores.fmt(game, b.score)}</b> <span class="myr">${Scores.rank(game, b.score)}</span>${b.lamp ? ` <span class="myr lamp">${esc(b.lamp)}</span>` : ''}
@@ -417,7 +417,7 @@
         <div class="fgroup"><span class="flabel">灯</span><select id="lamp">
           ${[['', '全部'], ['played', '打过'], ['unplayed', '没打过'], ['none', '未 FC'], ...Scores.LAMPS[game].map((l) => [l, l])]
             .map(([v, n]) => `<option value="${v}" ${F.lamp === v ? 'selected' : ''}>${n}</option>`).join('')}</select></div>
-        ${game === 'ongeki' ? `<div class="fgroup"><span class="flabel">FULL BELL</span><select id="fb">
+        ${game === 'ongeki' ? `<div class="fgroup"><span class="flabel">FB</span><select id="fb">
           ${[['', '全部'], ['yes', 'FB'], ['no', '未 FB']].map(([v, n]) => `<option value="${v}" ${F.fb === v ? 'selected' : ''}>${n}</option>`).join('')}</select></div>` : ''}
         <div class="fgroup"><span class="flabel">我的分数</span>
           <input id="myMin" class="myin" type="text" inputmode="decimal" placeholder="${game === 'maimai' ? '最低 例 100' : '最低 例 1000000'}" value="${esc(F.myMin)}"> –
@@ -605,7 +605,7 @@
       ],
       ongeki: [
         '容错前提：其余全部 CRITICAL BREAK、BELL 全收、无被弹。判定 950,000 按物量平分（BREAK 90%、HIT 50%），BELL 60,000 按 BELL 数平分。',
-        `Rating 是 Re:Fresh 的テクニカル部分，不含灯加成：${Calc.ongeki.lamps.map(([n, v]) => `${n} +${(v / 1000).toFixed(3)}`).join('、')}（FULL BELL 可以和其他灯叠加）。理论值 = 1,010,000 + AB+ + FULL BELL。`,
+        `Rating 是 Re:Fresh 的テクニカル部分，不含灯加成：${Calc.ongeki.lamps.map(([n, v]) => `${n} +${(v / 1000).toFixed(3)}`).join('、')}（FB 可以和其他灯叠加）。理论值 = 1,010,000 + AB+ + FB。`,
         'プラチナスコア理论值 = 物量 × 2，★1〜★5 / 虹★ 需要理论值的 94%〜99%；星级 Rating = ⌊★数 × 定数²⌋ ÷ 1000（虹★ 同 ★5）。',
       ],
     };

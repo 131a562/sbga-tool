@@ -96,7 +96,7 @@
       ],
       rating: (ds) => ({ sssp: ongekiRating(ds, 1007500), sss: ongekiRating(ds, 1000000) }),
       ratingMax: (ds) => ongekiRating(ds, 1010000, 350 + 50),
-      lamps: [['FULL BELL', 50], ['FULL COMBO', 100], ['ALL BREAK', 300], ['ALL BREAK+', 350]],
+      lamps: [['FB', 50], ['FC', 100], ['AB', 300], ['AB+', 350]],
       platinum: ongekiPlatinum,
     },
   };
