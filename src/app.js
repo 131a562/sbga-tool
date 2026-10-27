@@ -31,7 +31,7 @@
   };
   const PAGE = 120;
   const FILTER_VERSION = 2; // 难度选项有变化时加 1（音击加了 Re:MASTER）
-  const SORTS = [['default', '默认（版本新→旧）'], ['ds', '定数'], ['title', '曲名'], ['notes', '物量'], ['bpm', 'BPM'], ['date', '实装日期'], ['my', '我的分数']];
+  const SORTS = [['default', '版本新→旧'], ['ds', '定数'], ['title', '曲名'], ['notes', '物量'], ['bpm', 'BPM'], ['date', '实装日期'], ['my', '我的分数']];
   const cover = (s) => s.imgUrl || `https://dp4p6x0xfi5o9.cloudfront.net/${game}/img/cover/${s.img}`;
   const SERVER = { jp: '日服', intl: '国际服', cn: '国服' };
   const PLACEHOLDER = 'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 10 10"><rect width="10" height="10" fill="#8884"/></svg>');
