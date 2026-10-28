@@ -5,6 +5,7 @@
 // 主数据：arcade-songs-db（zetaraku）— 曲目列表、每个谱面的版本、定数（日服，maimai 另有国际服不同的值）、谱师、物量
 // 补充：otoge-db（zvuc）— 宴谱 / WORLD'S END / LUNATIC 的物量和谱师、各种类物量、wiki 链接、音击角色
 // 国服：落雪查分器（LXNS）— maimai / 中二的国服收录、国服定数、国服版本（和水鱼查分器的定数一致）
+// 谱面确认页：sdvx.in — 中二 / 音击每个谱面的链接；otoge-db 和主数据都没有的谱师、物量也从这里补
 // 音击参考定数：Tachi 的谱面库 — 现行定数还没测出来的谱面，用 Re:Fresh 初期的值作参考（只在等级和现在一样时采用）；
 //   LUNATIC 里哪些是原曲的 Re:MASTER 也按 Tachi 的分类
 import { readFile, writeFile, mkdir } from 'node:fs/promises';
@@ -408,6 +409,173 @@ function mergeOngekiLunatic(entries, tc, ts) {
   return { remaster, lunatic, keptLevel0, keptNoParent };
 }
 
+// ---- sdvx.in（谱面确认页）----
+// otoge-db 的谱面链接要等它收录才有，新谱面常常缺；而且 sdvx.in 的中二改版后，ULTIMA / WORLD'S END 的旧地址都失效了。
+// 所以直接读 sdvx.in：中二有整理好的 JSON（谱面页是 _/viewer.php?id=…&diff=…）；
+// 音击是每首歌一个 xxxxxsort.js，只下载 otoge-db 没给链接的那些。只存链接和文字信息（谱师、物量），不存谱面图片。
+const SDVX = 'https://sdvx.in';
+async function sdvxGet(path, json) {
+  for (let i = 1; ; i++) {
+    try {
+      const res = await fetch(SDVX + path, { redirect: 'manual' });
+      if (res.status === 404 || (res.status >= 300 && res.status < 400)) return null; // 没有这个文件（sdvx.in 会跳转到首页）
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      return json ? await res.json() : await res.text();
+    } catch (e) {
+      if (i >= 3) throw new Error(`${SDVX}${path}: ${e.cause?.code || e.message}`);
+      await new Promise((r) => setTimeout(r, 2000 * i));
+    }
+  }
+}
+// 同时最多 n 个请求，别给 sdvx.in 太大压力
+async function pool(items, n, fn) {
+  const out = [];
+  let i = 0;
+  await Promise.all(Array.from({ length: n }, async () => {
+    while (i < items.length) { const k = i++; out[k] = await fn(items[k]); }
+  }));
+  return out;
+}
+const htmlText = (s) => String(s ?? '').replace(/<[^>]*>/g, '').replace(/&#(\d+);/g, (_, n) => String.fromCodePoint(+n)).replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&#39;/g, "'").trim();
+// 谱师栏有时带作者的留言（「名字　←留言」），只取名字
+const desName = (s) => str(htmlText(s).split(/\s*←/)[0].trim());
+
+async function applySdvxChuni(entries) {
+  const files = [...Array.from({ length: 20 }, (_, i) => `songs${String(i + 1).padStart(2, '0')}`), 'songs_del'];
+  const weFiles = ['songs_we', 'songs_wedel', 'songs_wecourse', 'songs_weuso'];
+  const get = async (f) => (await sdvxGet(`/chunithm/_/json/${f}.json`, true)) || [];
+  const std = (await pool(files, 4, get)).flat();
+  const we = (await pool(weFiles, 4, get)).flat();
+  if (std.length < 1000) throw new Error(`sdvx.in 的中二曲目太少（${std.length}），格式可能变了`);
+  const findS = indexer(std);
+  const weKanji = (lv) => String(lv || '').replace(/^_/, '').replace(/[0-9☆★+]/g, '');
+  const findW = indexer(we, (o) => o.title + '|' + weKanji(o.levels));
+  const KEY = { basic: 'bsc', advanced: 'adv', expert: 'exp', master: 'mst', ultima: 'ult' };
+  const K = ['tap', 'hold', 'slide', 'air', 'flick'];
+  const notesOf = (n) => {
+    if (!n || n.tap === '' || n.tap == null) return null;
+    const o = {};
+    for (const k of K) o[k] = num(n[k]);
+    o.total = K.reduce((a, k) => a + (o[k] || 0), 0);
+    return o.total ? o : null;
+  };
+  const view = (id, diff) => `_/viewer.php?id=${encodeURIComponent(id)}&diff=${diff}`;
+  const st = { songs: 0, links: 0, designers: 0, notes: 0, unmatched: 0 };
+  for (const e of entries) {
+    const isWe = e.type === 'we';
+    const o = isWe ? findW(e.title + '|' + e.kanji, e.artist) : findS(e.title, e.artist);
+    for (const c of e.charts) c.link = undefined; // 旧地址（otoge-db 给的）不一定还能用，统一换成 sdvx.in 现在的地址
+    if (!o) { st.unmatched++; continue; }
+    st.songs++;
+    for (const c of e.charts) {
+      const k = isWe ? 'we' : KEY[c.d];
+      if (!k) continue;
+      const lv = isWe ? o.levels : o.levels?.[k];
+      if (!lv || String(lv).startsWith('_')) continue; // 「_」开头 = sdvx.in 没有这个谱面的图
+      c.link = view(o.id, k);
+      st.links++;
+      const des = desName(isWe ? o.designer : o.designer?.[k]);
+      if (!c.des && des) { c.des = des; st.designers++; }
+      const n = notesOf(isWe ? o.notes : o[k]);
+      if (n && !c.notes?.total) { c.notes = { ...c.notes, ...n }; st.notes++; }
+    }
+  }
+  return st;
+}
+
+async function applySdvxOngeki(entries) {
+  // 每个谱面的链接：「05/05146exp.htm」「luna/05106luna.htm」（otoge-db 给的不带 .htm）
+  // EXPERT 以上都有链接的条目，它的 sort.js 就不用再下载了。
+  // 但「ソロver.」和原曲共用一份谱面，原曲缺链接时不能因为ソロver. 有就跳过：只算只有一个条目用到的编号
+  const users = new Map(), done = new Map();
+  for (const e of entries) {
+    for (const c of e.charts) if (c.link && !c.link.endsWith('.htm')) c.link += '.htm';
+    const complete = !e.charts.some((c) => c.d !== 'basic' && c.d !== 'advanced' && !c.link);
+    const keys = new Set();
+    for (const c of e.charts) {
+      const m = c.link?.match(/^(luna|\d+)\/(\d+)[a-z]+\.htm$/);
+      if (m) keys.add(`${m[1]}/${m[2]}`);
+    }
+    for (const k of keys) { users.set(k, (users.get(k) || 0) + 1); if (complete) done.set(k, (done.get(k) || 0) + 1); }
+  }
+  const known = new Set([...done].filter(([k, n]) => n === 1 && users.get(k) === 1).map(([k]) => k));
+  const pages = await pool(Array.from({ length: 16 }, (_, i) => i), 4, (i) => sdvxGet(`/ongeki/sort/${i}.htm`));
+  const all = new Set();
+  for (const p of pages) for (const m of (p || '').matchAll(/\/ongeki\/([a-z0-9]+)\/js\/(\d+)(?:sort|luna)\.js/g)) all.add(`${m[1]}/${m[2]}`);
+  if (all.size < 500) throw new Error(`sdvx.in 的音击曲目太少（${all.size}），格式可能变了`);
+  const todo = [...all].filter((k) => !known.has(k));
+  const D = { B: 'basic', A: 'advanced', E: 'expert', M: 'master', L: 'lunatic' };
+  const songs = (await pool(todo, 4, async (k) => {
+    const [dir, id] = k.split('/');
+    const js = await sdvxGet(`/ongeki/${dir}/js/${id}${dir === 'luna' ? 'luna' : 'sort'}.js`);
+    if (!js) return null;
+    const v = (name) => js.match(new RegExp(`var ${name}${id}="(.*?)";`))?.[1];
+    const s = { title: htmlText(v('TITLE')), artist: htmlText(v('ARTIST')).replace(/^\/\s*/, ''), charts: {} };
+    // 只认真的链接（<a href=…>）：sdvx.in 没做图的难度写的是 <href=…>
+    for (const m of js.matchAll(new RegExp(`var LV${id}([BAEML])=".*?<a href=/ongeki/([a-z0-9]+/\\d+[a-z]+\\.htm)><img src=/ongeki/files/lv/[a-z]+_?([0-9]+\\+?)\\.png`, 'g'))) {
+      const L = m[1];
+      s.charts[D[L]] = {
+        link: m[2],
+        lv: m[3],
+        des: desName(js.match(new RegExp(`var CR${id}${L}="(.*?)";`))?.[1]?.replace(/.*NOTES DESIGNER \/ /, '')),
+        total: num(htmlText(js.match(new RegExp(`var CH${id}${L}="(.*?)";`))?.[1]).replace(/^CHAIN/, '')),
+        bell: num(htmlText(js.match(new RegExp(`var BL${id}${L}="(.*?)";`))?.[1]).replace(/^BELL/, '')),
+      };
+    }
+    return s.title ? s : null;
+  })).filter(Boolean);
+
+  const st = { fetched: todo.length, songs: 0, links: 0, designers: 0, notes: 0, noImage: 0, unmatched: [] };
+  const findStd = indexer(entries.filter((e) => e.type === 'std'));
+  const byTitle = new Map(), solos = new Map();
+  for (const e of entries) {
+    const t = norm(e.title);
+    if (!byTitle.has(t)) byTitle.set(t, []);
+    byTitle.get(t).push(e);
+    // 「曲名 -角色ソロver.-」：谱面和原曲一样，sdvx.in 上只有原曲那一份
+    const base = e.type === 'std' && e.title.match(/^(.+?)\s*-[^-]+ソロver\.-$/)?.[1];
+    if (base) {
+      if (!solos.has(norm(base))) solos.set(norm(base), []);
+      solos.get(norm(base)).push(e);
+    }
+  }
+  const fill = (c, x) => {
+    if (c.link) return;
+    c.link = x.link;
+    st.links++;
+    if (!c.des && x.des) { c.des = x.des; st.designers++; }
+    if (!c.notes?.total && x.total) { c.notes = { ...c.notes, total: x.total, bell: c.notes?.bell ?? x.bell }; st.notes++; }
+  };
+  for (const s of songs) {
+    let hit = false;
+    for (const [d, x] of Object.entries(s.charts)) {
+      if (d === 'lunatic') {
+        // LUNATIC 的图可能对应原曲的 Re:MASTER / LUNATIC，或单独的 LUNATIC 条目：找同名、等级相同的（优先还没有链接的）
+        const cands = (byTitle.get(norm(s.title)) || []).flatMap((e) => e.charts.filter((c) => c.d === 'lunatic' || c.d === 'remaster'));
+        const c = cands.find((c) => c.lv === x.lv && !c.link) || cands.find((c) => c.lv === x.lv) || (cands.length === 1 ? cands[0] : null);
+        if (c) { fill(c, x); hit = true; }
+        continue;
+      }
+      for (const e of [findStd(s.title, s.artist), ...(solos.get(norm(s.title)) || [])]) {
+        const c = e?.charts.find((c) => c.d === d);
+        if (c) { fill(c, x); hit = true; }
+      }
+    }
+    if (hit) st.songs++;
+    else if (!Object.keys(s.charts).length) st.noImage++; // sdvx.in 上这首歌一张谱面图都没有
+    else st.unmatched.push(s.title);
+  }
+  return st;
+}
+
+// sdvx.in 读不到时（中二）：把 otoge-db 的旧地址换算成新地址；WORLD'S END 的编号对不上，只能去掉
+function sdvxChuniFallback(entries) {
+  for (const e of entries) for (const c of e.charts) {
+    const m = c.link?.match(/^(?:\d+|ult)\/(\d+)(exp|mst|ult|adv|bsc)$/);
+    c.link = m ? `_/viewer.php?id=${m[1]}&diff=${m[2]}` : undefined;
+  }
+}
+
 const builders = { maimai: buildMaimai, chunithm: buildChunithm, ongeki: buildOngeki };
 
 await mkdir(outDir, { recursive: true });
@@ -424,6 +592,19 @@ for (const game of GAMES) {
     const [tc, ts] = await Promise.all([load(game, 'tc'), load(game, 'ts')]);
     stats[game].ref = applyOngekiRef(songs, tc, ts);
     stats[game].lunatic = mergeOngekiLunatic(songs, tc, ts);
+  }
+  if (game === 'chunithm' || game === 'ongeki') {
+    try {
+      stats[game].sdvx = localDir ? 'skip' : await (game === 'chunithm' ? applySdvxChuni : applySdvxOngeki)(songs);
+    } catch (e) {
+      // sdvx.in 读不到也照样出数据，只是链接少一些
+      console.warn(`sdvx.in（${game}）读取失败：${e.message}`);
+      stats[game].sdvx = 'failed';
+    }
+    if (typeof stats[game].sdvx === 'string') { // 没读 sdvx.in：只能用 otoge-db 的链接
+      if (game === 'chunithm') sdvxChuniFallback(songs);
+      else for (const e of songs) for (const c of e.charts) if (c.link && !c.link.endsWith('.htm')) c.link += '.htm';
+    }
   }
   const data = {
     game,

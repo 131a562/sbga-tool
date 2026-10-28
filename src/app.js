@@ -298,27 +298,31 @@
   }
 
   // ---- 我的成绩（查分书签同步的记录，见 src/scores.js） ----
-  const mine = {}; // 游戏 → { name, loading, err, res }
-  // 同步名字：自己填过的优先，没有就用查分面板（同一个网站）记住的名字
-  function acctName(g) {
-    const own = store.get('songs.account.' + g);
+  // 服务器选「国服」时读国服的记录（查分面板从水鱼 / 落雪导入的 maimai-cn / chunithm-cn），其余读日服书签的记录。
+  // 记录的格式和日服相同，对应谱面的方法也一样；成绩按「记录的键」分开存：maimai / maimai-cn / chunithm / chunithm-cn / ongeki
+  const mine = {}; // 记录的键 → { name, loading, err, res }
+  const sk = (g = game) => g + (F.region === 'cn' && g !== 'ongeki' ? '-cn' : '');
+  const baseGame = (k) => k.replace(/-cn$/, '');
+  // 同步名字：自己填过的优先，没有就用查分面板（同一个网站）记住的名字（国服的名字面板单独记在 names-cn 里）
+  function acctName(k) {
+    const own = store.get('songs.account.' + k);
     if (own != null) return own;
-    try { return (JSON.parse(localStorage.getItem('otoge-dash:names')) || {})[g] || ''; } catch { return ''; }
+    try { return (JSON.parse(localStorage.getItem(k.endsWith('-cn') ? 'otoge-dash:names-cn' : 'otoge-dash:names')) || {})[k] || ''; } catch { return ''; }
   }
-  const myBest = (s, c) => mine[game]?.res?.best.get(s.id + '|' + c.d) || null;
-  const hasMine = () => !!mine[game]?.res;
-  async function loadScores(g, name) {
+  const myBest = (s, c) => mine[sk()]?.res?.best.get(s.id + '|' + c.d) || null;
+  const hasMine = () => !!mine[sk()]?.res;
+  async function loadScores(k, name) {
     name = (name || '').trim();
-    if (!name) { delete mine[g]; if (g === game) { acctStatus(); refresh(); } return; }
-    mine[g] = { name, loading: true };
-    if (g === game) acctStatus();
+    if (!name) { delete mine[k]; if (k === sk()) { acctStatus(); refresh(); } return; }
+    mine[k] = { name, loading: true };
+    if (k === sk()) acctStatus();
     try {
-      const hist = await Scores.fetchHist(g, name);
-      mine[g] = { name, res: Scores.build(g, hist, data[g].songs) };
+      const hist = await Scores.fetchHist(k, name);
+      mine[k] = { name, res: Scores.build(baseGame(k), hist, data[baseGame(k)].songs) };
     } catch (e) {
-      mine[g] = { name, err: e.message };
+      mine[k] = { name, err: e.message };
     }
-    if (g !== game) return;
+    if (k !== sk()) return;
     acctStatus();
     refresh();
     if (!$('#detailView').hidden) route(); // 卡片页开着时也刷新
@@ -326,10 +330,14 @@
   function acctStatus() {
     const el = $('#acctStatus');
     if (!el) return;
-    const m = mine[game];
+    const m = mine[sk()];
     el.classList.toggle('err', !!m?.err);
     el.title = '';
-    if (!m) el.textContent = '填同步名字（查分书签里用的名字）后读取，谱面旁边会显示你的成绩';
+    if (!m) {
+      el.textContent = sk().endsWith('-cn')
+        ? '填国服的同步名字（查分面板从水鱼 / 落雪导入时用的名字）后读取，谱面旁边会显示你的国服成绩'
+        : '填同步名字（查分书签里用的名字）后读取，谱面旁边会显示你的成绩';
+    }
     else if (m.loading) el.textContent = '读取中…';
     else if (m.err) el.textContent = m.err;
     else {
@@ -429,7 +437,7 @@
       </div>
       <div class="frow">
         <div class="fgroup"><span class="flabel">账号</span><div class="fctl">
-          <input id="acct" type="text" placeholder="同步名字" value="${esc(mine[game]?.name ?? acctName(game))}" autocomplete="off">
+          <input id="acct" type="text" placeholder="${sk().endsWith('-cn') ? '国服同步名字' : '同步名字'}" value="${esc(mine[sk()]?.name ?? acctName(sk()))}" autocomplete="off">
           <button class="icon-btn" id="acctLoad">读取成绩</button></div></div>
         <div class="fgroup lampg">${lampSliderHtml()}<span class="hint" id="lampTxt"></span>${game === 'ongeki' ? fbBtnHtml() : ''}</div>
         <div class="fgroup"><span class="flabel">我的分数</span><div class="fctl">
@@ -522,7 +530,12 @@
       else if (id === 'est') F.est = e.target.checked;
       else return;
       if (id === 'sort') $('#dir').disabled = F.sort === 'default';
-      if (id === 'region') { F.vers = []; renderFilters(); } // 国服的版本名不一样
+      if (id === 'region') {
+        F.vers = []; // 国服的版本名不一样
+        renderFilters();
+        // 切到国服 / 切回来：读对应服务器的成绩（读过的不再读）
+        if (!mine[sk()] && acctName(sk())) loadScores(sk(), acctName(sk()));
+      }
       refresh();
     });
     f.addEventListener('keydown', (e) => { if (e.target.id === 'acct' && e.key === 'Enter') $('#acctLoad').click(); });
@@ -551,8 +564,8 @@
       else if (b.id === 'fb') { F.fb = F.fb === '' ? 'yes' : F.fb === 'yes' ? 'no' : ''; b.textContent = fbText(); b.classList.toggle('on', !!F.fb); }
       else if (b.id === 'acctLoad') {
         const name = $('#acct').value.trim();
-        store.set('songs.account.' + game, name);
-        loadScores(game, name);
+        store.set('songs.account.' + sk(), name);
+        loadScores(sk(), name);
         return;
       }
       else return;
@@ -733,7 +746,7 @@
           ${nc ? `<span>等级</span><span>${esc(c.d === 'worldsend' ? c.lv : v.lv)}</span>` : `<span>${c.d === 'utage' ? '等级' : '定数'}</span><span>${dsAcross(c)}</span>`}
           ${myHtml(s, c)}
           <span>谱师</span><span>${c.des ? esc(c.des) : '<span class="na">未知</span>'}</span>
-          ${c.link ? `<span>谱面</span><span><a href="https://sdvx.in/${game}/${esc(c.link)}.htm" target="_blank" rel="noopener">谱面确认（sdvx.in）↗</a></span>` : ''}
+          ${c.link ? `<span>谱面</span><span><a href="https://sdvx.in/${game}/${esc(c.link)}" target="_blank" rel="noopener">谱面确认（sdvx.in）↗</a></span>` : ''}
           ${c.ver && c.ver !== s.ver ? `<span>追加版本</span><span>${esc(c.ver)}</span>` : ''}
           <span>物量</span><span>${notesHtml(c.notes)}</span>
         </div>
@@ -833,7 +846,7 @@
       const d = data[g];
       $('#dataTime').textContent = `数据 ${d.sourceTime ? d.sourceTime.slice(0, 10) : d.generated.slice(0, 10)}`;
       refresh();
-      if (!mine[g] && acctName(g)) loadScores(g, acctName(g));
+      if (!mine[sk(g)] && acctName(sk(g))) loadScores(sk(g), acctName(sk(g)));
     }
     if (showList) {
       document.title = `${GAMES[g].name} - SBGA TOOL`;
