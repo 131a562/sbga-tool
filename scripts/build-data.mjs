@@ -5,6 +5,7 @@
 // 主数据：arcade-songs-db（zetaraku）— 曲目列表、每个谱面的版本、定数（日服，maimai 另有国际服不同的值）、谱师、物量
 // 补充：otoge-db（zvuc）— 宴谱 / WORLD'S END / LUNATIC 的物量和谱师、各种类物量、wiki 链接、音击角色
 // 国服：落雪查分器（LXNS）— maimai / 中二的国服收录、国服定数、国服版本（和水鱼查分器的定数一致）
+// 书签用的定数文件：data/feed/ 下，格式和 otoge-db / reiwa.f5.si（音击书签原来的定数表）一样，定数换成这里的值
 // 谱面确认页：sdvx.in — 中二 / 音击每个谱面的链接；otoge-db 和主数据都没有的谱师、物量也从这里补
 // 音击参考定数：Tachi 的谱面库 — 现行定数还没测出来的谱面，用 Re:Fresh 初期的值作参考（只在等级和现在一样时采用）；
 //   LUNATIC 里哪些是原曲的 Re:MASTER 也按 Tachi 的分类
@@ -24,6 +25,7 @@ async function load(game, source) {
     lx: `https://maimai.lxns.net/api/v0/${game}/song/list?notes=true`,
     tc: `https://raw.githubusercontent.com/zkldi/Tachi/main/db/seeds/charts-${game}.json`,
     ts: `https://raw.githubusercontent.com/zkldi/Tachi/main/db/seeds/songs-${game}.json`,
+    rw: 'https://reiwa.f5.si/ongeki_record.json',
   }[source];
   // 国内的服务器从海外连有时会超时，多试几次
   for (let i = 1; ; i++) {
@@ -164,6 +166,7 @@ function buildMaimai(z, odb) {
       const pre = type === 'dx' ? 'dx_lev_' : 'lev_';
       const map = { basic: 'bas', advanced: 'adv', expert: 'exp', master: 'mas', remaster: 'remas' };
       e.charts = sheets.map((s) => mergeChart(s, odbChart(o, pre + map[s.difficulty], K)));
+      odbOf.set(e, { o, pre });
       e.verIntl = e.charts.find((c) => c.intl?.ver)?.intl.ver;
       e.regions = regionsOf(sheets);
       out.push(e);
@@ -205,6 +208,7 @@ function buildChunithm(z, odb) {
     e.type = 'std';
     const map = { basic: 'bas', advanced: 'adv', expert: 'exp', master: 'mas', ultima: 'ult' };
     e.charts = song.sheets.map((s) => mergeChart(s, odbChart(o, 'lev_' + map[s.difficulty], K)));
+    odbOf.set(e, { o, pre: 'lev_' });
     e.regions = regionsOf(song.sheets);
     out.push(e);
   }
@@ -576,6 +580,88 @@ function sdvxChuniFallback(entries) {
   }
 }
 
+// ---- 音击的ソロver. ----
+// 「曲名 -角色ソロver.-」的谱面和原曲一样。Act.2 改定数时 otoge-db 只改了原曲，ソロver. 还是旧值，
+// arcade-songs 又没有ソロver. 的定数，所以等级相同时直接用原曲的定数
+function applyOngekiSolo(entries) {
+  const std = new Map();
+  for (const e of entries) if (e.type === 'std') std.set(norm(e.title), e);
+  let fixed = 0, same = 0;
+  for (const e of entries) {
+    const base = e.type === 'std' && e.title.match(/^(.+?)\s*-[^-]+ソロver\.-$/)?.[1];
+    const b = base && std.get(norm(base));
+    if (!b) continue;
+    for (const c of e.charts) {
+      const bc = b.charts.find((x) => x.d === c.d);
+      if (bc?.ds == null || bc.lv !== c.lv) continue;
+      if (c.ds === bc.ds) { same++; continue; }
+      c.ds = bc.ds;
+      fixed++;
+    }
+  }
+  return { fixed, same };
+}
+
+// ---- 给查分书签 / 查分面板用的定数文件（data/feed/）----
+// 格式和书签原来读的完全一样（中二 / maimai = otoge-db 的 music-ex.json，音击 = reiwa.f5.si 的 ongeki_record.json），
+// 只是定数换成这里整理好的值，这样书签只换个地址就能用，三边的定数也就统一了
+const odbOf = new WeakMap(); // 条目 → { o: otoge-db 的记录, pre: 字段前缀 }
+const FEED_KEY = { basic: 'bas', advanced: 'adv', expert: 'exp', master: 'mas', ultima: 'ult', remaster: 'remas' };
+const dsText = (ds) => ds.toFixed(1);
+function odbFeed(entries, odb) {
+  const copy = new Map(odb.map((o) => [o, { ...o }]));
+  let filled = 0, changed = 0;
+  for (const e of entries) {
+    const m = odbOf.get(e);
+    if (!m?.o) continue;
+    const r = copy.get(m.o);
+    for (const c of e.charts) {
+      const k = FEED_KEY[c.d];
+      if (!k || c.ds == null) continue;
+      const f = `${m.pre}${k}_i`;
+      if (!(`${m.pre}${k}` in r) || !r[`${m.pre}${k}`]) continue; // otoge-db 没有这个难度
+      const old = r[f];
+      if (old === '' || old == null) filled++;
+      else if (Math.abs(+old - c.ds) > 1e-6) changed++;
+      else continue;
+      r[f] = dsText(c.ds);
+    }
+  }
+  return { list: [...copy.values()], filled, changed };
+}
+// reiwa 的等级：13 / 13.5（或 13.7）= 13+；LUNATIC 0 = 0
+const reiwaLv = (lv) => (lv == null ? '' : Math.floor(lv) + (lv % 1 >= 0.45 ? '+' : ''));
+function reiwaFeed(entries, rows) {
+  const byTitle = new Map();
+  for (const e of entries) {
+    const t = norm(e.title);
+    if (!byTitle.has(t)) byTitle.set(t, []);
+    byTitle.get(t).push(e);
+  }
+  const D = { EXP: ['expert'], MAS: ['master'], LUN: ['lunatic', 'remaster'] };
+  let filled = 0, changed = 0, unmatched = 0;
+  const list = rows.map((r) => {
+    if (!D[r.diff]) return r;
+    const es = byTitle.get(norm(r.title)) || [];
+    const cands = es.flatMap((e) => e.charts.filter((c) => D[r.diff].includes(c.d)).map((c) => ({ e, c })));
+    const lv = reiwaLv(r.level);
+    const hit = (cands.length > 1 ? cands.filter(({ c }) => c.lv === lv) : cands);
+    const one = hit.length > 1 ? hit.filter(({ e }) => norm(e.artist) === norm(r.artist)) : hit;
+    if (one.length !== 1) { if (r.artist !== '削除') unmatched++; return r; }
+    const { c } = one[0];
+    if (c.ds == null) return r; // 这里也没有确定的定数：保留 reiwa 的值（未确定标记也保留）
+    if (r.is_unknown || !(r.const > 0)) filled++;
+    else if (Math.abs(r.const - c.ds) > 1e-6) changed++;
+    else return r;
+    return { ...r, const: c.ds, is_unknown: 0 };
+  });
+  return { list, filled, changed, unmatched };
+}
+async function writeFeed(name, list) {
+  await mkdir(join(outDir, 'feed'), { recursive: true });
+  await writeFile(join(outDir, 'feed', name), JSON.stringify(list));
+}
+
 const builders = { maimai: buildMaimai, chunithm: buildChunithm, ongeki: buildOngeki };
 
 await mkdir(outDir, { recursive: true });
@@ -589,6 +675,7 @@ for (const game of GAMES) {
     stats[game].cn = { matched: cn.matched, added: cn.added, cnDsCharts: cn.cnDsCharts, dsDiffFromJp: cn.dsDiffFromJp, filledFromLxns: cn.filled };
   }
   if (game === 'ongeki') {
+    stats[game].solo = applyOngekiSolo(songs);
     const [tc, ts] = await Promise.all([load(game, 'tc'), load(game, 'ts')]);
     stats[game].ref = applyOngekiRef(songs, tc, ts);
     stats[game].lunatic = mergeOngekiLunatic(songs, tc, ts);
@@ -618,5 +705,20 @@ for (const game of GAMES) {
   // 写成 <script> 能直接加载的 JS，这样双击 index.html（file://）也能用
   const js = `window.SONG_DATA = window.SONG_DATA || {};\nwindow.SONG_DATA[${JSON.stringify(game)}] = ${JSON.stringify(data)};\n`;
   await writeFile(join(outDir, `${game}.js`), js);
+  // 书签用的定数文件。音击的要另外下载 reiwa 的表，读不到时就不更新这一份（沿用上次的）
+  try {
+    if (game === 'ongeki') {
+      const f = reiwaFeed(songs, await load(game, 'rw'));
+      await writeFeed('ongeki_record.json', f.list);
+      stats[game].feed = { filled: f.filled, changed: f.changed, unmatched: f.unmatched };
+    } else {
+      const f = odbFeed(songs, odb);
+      await writeFeed(`${game}-music-ex.json`, f.list);
+      stats[game].feed = { filled: f.filled, changed: f.changed };
+    }
+  } catch (e) {
+    console.warn(`书签用的定数文件（${game}）没有更新：${e.message}`);
+    stats[game].feed = 'failed';
+  }
   console.log(game, stats[game], `${(js.length / 1024 / 1024).toFixed(2)} MB`);
 }

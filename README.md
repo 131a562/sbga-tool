@@ -90,6 +90,8 @@ node scripts/build-data.mjs
 - 国服：[落雪查分器](https://maimai.lxns.net/)（LXNS）— maimai / 中二的国服收录、国服定数、国服版本；日服数据源缺的谱师和物量也用它补（主要是 WORLD'S END）。定数和水鱼查分器的一致（2026-10-21 对比过：中二全部一致，maimai 只有宴谱的写法不同）。国服有、日服数据里没有的曲目会单独加成条目（曲绘用落雪的）
 - 音击参考定数：[Tachi](https://github.com/zkldi/Tachi) 的谱面库（`db/seeds/charts-ongeki.json`）。Re:Fresh Act.2 又改过一次定数，Tachi 的值是之前的，所以只用来补现行定数还没测出来的谱面，而且只在 Tachi 的等级和现在的官方等级一样时才用；卡片页标「参考，未确认」，列表上显示 `~10.7`；LUNATIC 里哪些是原曲的 Re:MASTER 也按 Tachi 的分类
 - 谱面确认页：[sdvx.in](https://sdvx.in/)（中二 / 音击）— 每个谱面的「谱面确认」链接；新谱面 otoge-db 还没有的谱师、物量也从这里补。中二读 sdvx.in 整理好的曲目 JSON（谱面页是 `viewer.php?id=…&diff=…`，旧的 `ult/` `end/` 地址已经失效）；音击读 `sort/0〜15.htm` 的曲目列表，只下载 otoge-db 没给链接的那些曲目的 `xxxxxsort.js`（同时最多 4 个请求）。sdvx.in 没做图的难度（等级前带 `_`、或者写成 `<href=…>`）不加链接。只存链接和文字，不存谱面图片。sdvx.in 读不到时照样出数据，只用 otoge-db 的链接
+- 音击的ソロver.：谱面和原曲一样，arcade-songs 没有它们的定数，otoge-db 在 Act.2 改定数时又只改了原曲（ソロver. 还是旧值，和等级对不上），所以等级相同时直接用原曲的定数
+- **书签用的定数文件**：`data/feed/chunithm-music-ex.json` / `maimai-music-ex.json`（otoge-db 的格式）和 `data/feed/ongeki_record.json`（[reiwa.f5.si](https://reiwa.f5.si/ongeki_record.json) 的格式），只是定数换成这里的值。三个查分书签和查分面板先读这几份（`https://131a562.github.io/sbga-tool/data/feed/…`），读不到时退回 otoge-db / reiwa.f5.si，这样四边用的定数是同一份。音击这份要另外下载 reiwa 的表做底，下载失败时这一份不更新
 - 国际服：maimai 用 arcade-songs 里国际服和日服不同的等级 / 定数 / 版本；中二没有国际服单独的数据，卡片页上国际服的定数是日服的值，带 `*` 标注
 - 落雪的服务器在国内，从海外连偶尔超时，脚本会自动重试 3 次
 - 调试时可以把各数据源的 json 下载到一个目录（`z_maimai.json` / `maimai.json` / `lx_maimai.json` 这样命名），`node scripts/build-data.mjs <目录>` 离线生成
