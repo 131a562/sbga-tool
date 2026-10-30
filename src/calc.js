@@ -16,10 +16,11 @@
     const brk50 = B ? 0.25 / B : null; // 一个绝赞 50 落
     const brk100 = B ? 0.5 / B : null;
     const tol = (budget) => ({ great: floor(budget / great), good: floor(budget / good), brk50: B ? floor(budget / brk50) : null });
+    // 理论值 101%：SSS+（100.5%）能扣 0.5%，SSS（100.0%）能扣 1.0%
     return {
       unit: { great, good, miss, brk50, brk100 },
       sssp: tol(0.5),
-      sss: tol(1.5),
+      sss: tol(1.0),
       dxMax: n.total * 3,
     };
   }
