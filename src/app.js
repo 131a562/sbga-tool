@@ -37,7 +37,7 @@
   const SORTS = [['default', '版本新→旧'], ['ds', '定数'], ['title', '曲名'], ['notes', '物量'], ['bpm', 'BPM'], ['date', '实装日期'], ['my', '我的分数']];
   const cover = (s) => s.imgUrl || `https://dp4p6x0xfi5o9.cloudfront.net/${game}/img/cover/${s.img}`;
   const SERVER = { jp: '日服', intl: '国际服', cn: '国服' };
-  const DASH_URL = 'https://131a562.github.io/otoge-dashboard/'; // 查分面板
+  const DASH_URL = 'https://131a562.github.io/sbga-dashboard/'; // SBGA DASHBOARD（查分面板，以前叫 otoge-dashboard）
   const PLACEHOLDER = 'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 10 10"><rect width="10" height="10" fill="#8884"/></svg>');
 
   const $ = (s) => document.querySelector(s);
@@ -388,7 +388,7 @@
     return `<span>我的成绩</span><span class="mine"><b>${Scores.fmt(game, b.score)}</b> <span class="myr">${Scores.rank(game, b.score)}</span>${b.lamp ? ` <span class="myr lamp">${esc(b.lamp)}</span>` : ''}
       ${extra.length ? `<span class="hint">${extra.map(esc).join('　')}</span>` : ''}
       ${nx ? `<span class="hint">离 ${nx.name} 还差 ${Scores.fmtGap(game, nx.gap)}</span>` : ''}
-      ${b.o ? `<a class="mylink" href="${esc(dashLink(s, b))}">查分面板里的推分记录 →</a>` : ''}</span>`;
+      ${b.o ? `<a class="mylink" href="${esc(dashLink(s, b))}">SBGA DASHBOARD 里的推分记录 →</a>` : ''}</span>`;
   }
   // 查分面板（同一个网站）里这个谱面的推分记录。名字带上各游戏的（面板会显示这几个游戏），
   // 谱面用历史记录里的写法：曲名、难度，maimai 加 DX / STD，音击同名曲加艺术家（见查分面板的 games.js keyOf）

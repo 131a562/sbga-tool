@@ -43,10 +43,10 @@ maimai DX / CHUNITHM / オンゲキ 三个游戏的曲目资料（只有曲目�
 
 ## 我的成绩
 
-可以接入三个查分书签（chuni-b50 / maimai-dx-score / ongeki-score-export）同步到 otoge-history 的成绩记录，经由 otoge-sync **只读**取得（和 otoge-dashboard 用的是同一份数据）。
+可以接入三个查分书签（chuni-b50 / maimai-dx-score / ongeki-score-export）同步到 otoge-history 的成绩记录，经由 otoge-sync **只读**取得（和 SBGA DASHBOARD 用的是同一份数据）。
 
-- **账号**：筛选面板的「账号」填同步名字（书签第一次同步时填的名字，大小写、全角半角都可以），点「读取成绩」。名字按游戏分别记在浏览器里；没填过时默认用 otoge-dashboard 记住的名字（同一个网站），所以用过查分面板的话打开就会自动读取。
-- **显示**：只在卡片页的谱面卡里显示（列表和难度按钮上不显示），多一行「我的成绩」：最佳分数、评级、灯（maimai 还有 SYNC 和 DX 分 / 现在的 ✦ 数，音击还有 FB 和プラチナスコア / 星级），以及离下一个评级还差多少。下面的「查分面板里的推分记录 →」打开 otoge-dashboard 里这个谱面的全部记录（每次的分数、什么时候刷新了最佳），网址带着各游戏的同步名字。
+- **账号**：筛选面板的「账号」填同步名字（书签第一次同步时填的名字，大小写、全角半角都可以），点「读取成绩」。名字按游戏分别记在浏览器里；没填过时默认用 SBGA DASHBOARD 记住的名字（同一个网站），所以用过 SBGA DASHBOARD 的话打开就会自动读取。
+- **显示**：只在卡片页的谱面卡里显示（列表和难度按钮上不显示），多一行「我的成绩」：最佳分数、评级、灯（maimai 还有 SYNC 和 DX 分 / 现在的 ✦ 数，音击还有 FB 和プラチナスコア / 星级），以及离下一个评级还差多少。下面的「SBGA DASHBOARD 里的推分记录 →」打开 SBGA DASHBOARD 里这个谱面的全部记录（每次的分数、什么时候刷新了最佳），网址带着各游戏的同步名字。
 - **灯**：「读取成绩」后面那条滑槽，从左到右是 未游玩 → 未FC → 各种灯（maimai 未游玩-未FC-FC-FC+-AP-AP+，中二 未游玩-未FC-FC-AJ-AJC，音击 未游玩-未FC-FC-AB-AB+）。拖两个滑块选一个范围，例如左边拖到 FC = 「FC 以上」，右边拖到 未FC = 「打过但没有灯」，两个都拖到 未游玩 = 「没打过」；整条（默认）= 不限。音击的滑槽右边另有一个 **FB** 小按钮，点一下切换：不限 → 只看 FB → 只看未FB。和定数、难度一样是按谱面算的：例如「MASTER + 定数 13.0〜13.9 + 灯 FC〜AP+」= 有这样一张谱面的曲目。评级的范围用下面的「我的分数」筛（例如 SSS 但没到 SSS+）。
 - **我的分数**：可以自己填分数范围（只填一头也行，两头都包含）。maimai 填达成率（例 `100` 〜 `100.4999`，不用写 %），中二 / 音击填分数（例 `1005000` 〜 `1007499`，可以带逗号）。只留下打过、最佳分数在范围内的谱面，和其他条件一起按谱面算。
 - **排序**：「我的分数」按符合条件的谱面里定数最高那张的成绩排。
@@ -79,9 +79,9 @@ maimai 另外显示 DX 分的 ✦1〜✦5 各需要多少分（理论值 = 物�
 
 ## 网址
 
-- `#/maimai`、`#/chunithm`、`#/ongeki`：各游戏的列表。页头右边的「查分面板」打开 otoge-dashboard。
+- `#/maimai`、`#/chunithm`、`#/ongeki`：各游戏的列表。页头右边的「DASHBOARD」打开 SBGA DASHBOARD（[https://131a562.github.io/sbga-dashboard/](https://131a562.github.io/sbga-dashboard/)，以前叫 otoge-dashboard）。
 - `#/游戏/song/条目 id`：卡片页，后面加 `?d=master` 这样的难度时默认打开那个难度（没有这个难度时打开最高难度）。
-- `#/游戏/find?title=曲名&diff=难度`：按历史记录里的写法找谱面（otoge-dashboard 的谱面记录跳过来用）。难度写法同历史记录：中二是 0〜4，maimai / 音击是 `MASTER` 这样的难度名；maimai 加 `&kind=DX` / `STD`，音击同名曲加 `&k=曲名|难度|艺术家`（书签的键）。找到了就换成卡片页的网址（替换历史记录，返回键直接回到查分面板）；找不到时回到列表，并用曲名搜索。找谱面的规则和「我的成绩」对应谱面的相同（`src/scores.js` 的 `find`）。
+- `#/游戏/find?title=曲名&diff=难度`：按历史记录里的写法找谱面（SBGA DASHBOARD 的谱面记录跳过来用）。难度写法同历史记录：中二是 0〜4，maimai / 音击是 `MASTER` 这样的难度名；maimai 加 `&kind=DX` / `STD`，音击同名曲加 `&k=曲名|难度|艺术家`（书签的键）。找到了就换成卡片页的网址（替换历史记录，返回键直接回到 SBGA DASHBOARD）；找不到时回到列表，并用曲名搜索。找谱面的规则和「我的成绩」对应谱面的相同（`src/scores.js` 的 `find`）。
 
 ## 更新数据
 
@@ -97,7 +97,7 @@ node scripts/build-data.mjs
 - 音击参考定数：[Tachi](https://github.com/zkldi/Tachi) 的谱面库（`db/seeds/charts-ongeki.json`）。Re:Fresh Act.2 又改过一次定数，Tachi 的值是之前的，所以只用来补现行定数还没测出来的谱面，而且只在 Tachi 的等级和现在的官方等级一样时才用；卡片页标「参考，未确认」，列表上显示 `~10.7`；LUNATIC 里哪些是原曲的 Re:MASTER 也按 Tachi 的分类
 - 谱面确认页：[sdvx.in](https://sdvx.in/)（中二 / 音击）— 每个谱面的「谱面确认」链接；新谱面 otoge-db 还没有的谱师、物量也从这里补。中二读 sdvx.in 整理好的曲目 JSON（谱面页是 `viewer.php?id=…&diff=…`，旧的 `ult/` `end/` 地址已经失效）；音击读 `sort/0〜15.htm` 的曲目列表，只下载 otoge-db 没给链接的那些曲目的 `xxxxxsort.js`（同时最多 4 个请求）。sdvx.in 没做图的难度（等级前带 `_`、或者写成 `<href=…>`）不加链接。只存链接和文字，不存谱面图片。sdvx.in 读不到时照样出数据，只用 otoge-db 的链接
 - 音击的ソロver.：谱面和原曲一样，arcade-songs 没有它们的定数，otoge-db 在 Act.2 改定数时又只改了原曲（ソロver. 还是旧值，和等级对不上），所以等级相同时直接用原曲的定数
-- **书签用的定数文件**：`data/feed/chunithm-music-ex.json` / `maimai-music-ex.json`（otoge-db 的格式）和 `data/feed/ongeki_record.json`（[reiwa.f5.si](https://reiwa.f5.si/ongeki_record.json) 的格式），只是定数换成这里的值。三个查分书签和查分面板先读这几份（`https://131a562.github.io/sbga-tool/data/feed/…`），读不到时退回 otoge-db / reiwa.f5.si，这样四边用的定数是同一份。音击这份要另外下载 reiwa 的表做底，下载失败时这一份不更新
+- **书签用的定数文件**：`data/feed/chunithm-music-ex.json` / `maimai-music-ex.json`（otoge-db 的格式）和 `data/feed/ongeki_record.json`（[reiwa.f5.si](https://reiwa.f5.si/ongeki_record.json) 的格式），只是定数换成这里的值。三个查分书签和 SBGA DASHBOARD 先读这几份（`https://131a562.github.io/sbga-tool/data/feed/…`），读不到时退回 otoge-db / reiwa.f5.si，这样四边用的定数是同一份。音击这份要另外下载 reiwa 的表做底，下载失败时这一份不更新
 - 国际服：maimai 用 arcade-songs 里国际服和日服不同的等级 / 定数 / 版本；中二没有国际服单独的数据，卡片页上国际服的定数是日服的值，带 `*` 标注
 - 落雪的服务器在国内，从海外连偶尔超时，脚本会自动重试 3 次
 - 调试时可以把各数据源的 json 下载到一个目录（`z_maimai.json` / `maimai.json` / `lx_maimai.json` 这样命名），`node scripts/build-data.mjs <目录>` 离线生成
