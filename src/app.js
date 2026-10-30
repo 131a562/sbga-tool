@@ -802,7 +802,6 @@
     const meta = [
       ['分类', s.cat], ...versionRows(s), ['BPM', s.bpm ?? '—'], ['实装日期', s.date],
       ...(G.regions.length > 1 ? [['收录', regionText(s)]] : []),
-      ['别名', s.alias?.join('、')],
       ...(g === 'ongeki' ? [['对手', rival], ['章节', s.chapter], ['Bonus Track', s.bonus ? '是' : null]] : []),
       ...(s.type === 'we' ? [['难度', s.kanji + '☆'.repeat(s.star || 0)]] : []),
     ].filter(([, x]) => x != null && x !== '');
@@ -819,6 +818,7 @@
         <div class="hero-body">
           <div class="artist a-body">${artistHtml(s.artist)}</div>
           <div class="meta">${meta.map(([k, x]) => `<div${String(x).length > 24 ? ' class="long"' : ''}><span>${k}</span>${esc(x)}</div>`).join('')}</div>
+          ${aliasHtml(s)}
           ${s.comment ? `<div class="comment">${esc(s.comment)}</div>` : ''}
           <div class="related">${s.wiki ? `<a href="${esc(s.wiki)}" target="_blank" rel="noopener">wiki ↗</a>` : ''}
             ${related.length ? `<span>同名的其他条目：</span>${related.map((x) => `<a class="chip" href="#/${g}/song/${encodeURIComponent(x.id)}">${x.type === 'utage' || x.type === 'we' ? (x.type === 'utage' ? '宴·' : 'WE·') + esc(x.kanji) : esc(G.types.find((t) => t[0] === x.type)?.[1])}${x.artist !== s.artist ? ' · ' + esc(x.artist) : ''}</a>`).join('')}` : ''}</div>
@@ -828,6 +828,10 @@
       <div class="dtabs" role="tablist">${charts.map((c, i) => diffTab(c, i === pick, i)).join('')}</div>
       <div class="chartpanel">${chartCard(s, charts[pick])}</div>
       ${helpHtml(g)}`;
+    v.querySelector('.al-more')?.addEventListener('click', (e) => {
+      const box = e.target.closest('.aliases');
+      e.target.textContent = box.classList.toggle('open') ? '收起' : `全部 ${s.alias.length} 个`;
+    });
     v.querySelector('.dtabs').addEventListener('click', (e) => {
       const b = e.target.closest('.dtab');
       if (!b) return;
@@ -835,6 +839,15 @@
       v.querySelector('.chartpanel').innerHTML = chartCard(s, charts[+b.dataset.i]);
     });
     window.scrollTo(0, 0);
+  }
+
+  // 中文别名：单独一行小标签；多的时候先只显示前 ALIAS_SHOW 个，点「全部 N 个」展开
+  const ALIAS_SHOW = 8;
+  function aliasHtml(s) {
+    const list = s.alias || [];
+    if (!list.length) return '';
+    const more = list.length > ALIAS_SHOW;
+    return `<div class="aliases${more ? '' : ' open'}"><span class="al-k">别名</span><div class="al-list">${list.map((a, i) => `<span class="al${i >= ALIAS_SHOW ? ' x' : ''}">${esc(a)}</span>`).join('')}${more ? `<button type="button" class="al-more">全部 ${list.length} 个</button>` : ''}</div></div>`;
   }
 
   // ---- 切换游戏 / 路由 ----
