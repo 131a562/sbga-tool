@@ -90,7 +90,8 @@
       const key = target.s.id + '|' + target.c.d;
       const b = best.get(key) || { score: -1, lamp: '', n: 0 };
       b.n++;
-      if (v > b.score) b.score = v;
+      // o：记录里的写法（曲名、难度、键），链接到查分面板的谱面记录时用
+      if (v > b.score) { b.score = v; b.o = { n: o.n, d: o.d, kd: o.kd, k: o.k }; }
       const l = G.lamp(o);
       if (l && G.lamps.indexOf(l) > G.lamps.indexOf(b.lamp)) b.lamp = l;
       if (game === 'maimai') {
@@ -109,6 +110,13 @@
     }
     const last = (hist.obs || []).map((o) => o.t).sort().pop() || '';
     return { best, total, matched, unmatched: [...unmatched], charts: best.size, last, player: hist.name || '' };
+  }
+  // 一条记录（{ n 曲名, d 难度, kd, k }，写法同历史记录）→ { s 条目, c 谱面 }；查分面板跳过来时用
+  function find(game, o, songs) {
+    const d = GAME[game].diff(o);
+    if (!d) return null;
+    const t = norm(o.n);
+    return locate(game, o, d, songs.filter((s) => norm(s.title) === t));
   }
   const SYNC_ORDER = ['SYNC', 'FS', 'FS+', 'FDX', 'FDX+'];
   const syncRank = (x) => SYNC_ORDER.indexOf(x);
@@ -164,5 +172,5 @@
   // 各游戏的灯（从低到高，筛选「灯」用）
   const LAMPS = Object.fromEntries(Object.entries(GAME).map(([g, x]) => [g, x.lamps]));
 
-  window.Scores = { fetchHist, build, rank, next, fmt, fmtGap, RANKS, LAMPS, cleanAccount };
+  window.Scores = { fetchHist, build, find, rank, next, fmt, fmtGap, RANKS, LAMPS, cleanAccount };
 })();

@@ -37,6 +37,7 @@
   const SORTS = [['default', '版本新→旧'], ['ds', '定数'], ['title', '曲名'], ['notes', '物量'], ['bpm', 'BPM'], ['date', '实装日期'], ['my', '我的分数']];
   const cover = (s) => s.imgUrl || `https://dp4p6x0xfi5o9.cloudfront.net/${game}/img/cover/${s.img}`;
   const SERVER = { jp: '日服', intl: '国际服', cn: '国服' };
+  const DASH_URL = 'https://131a562.github.io/otoge-dashboard/'; // 查分面板
   const PLACEHOLDER = 'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 10 10"><rect width="10" height="10" fill="#8884"/></svg>');
 
   const $ = (s) => document.querySelector(s);
@@ -386,7 +387,21 @@
     }
     return `<span>我的成绩</span><span class="mine"><b>${Scores.fmt(game, b.score)}</b> <span class="myr">${Scores.rank(game, b.score)}</span>${b.lamp ? ` <span class="myr lamp">${esc(b.lamp)}</span>` : ''}
       ${extra.length ? `<span class="hint">${extra.map(esc).join('　')}</span>` : ''}
-      ${nx ? `<span class="hint">离 ${nx.name} 还差 ${Scores.fmtGap(game, nx.gap)}</span>` : ''}</span>`;
+      ${nx ? `<span class="hint">离 ${nx.name} 还差 ${Scores.fmtGap(game, nx.gap)}</span>` : ''}
+      ${b.o ? `<a class="mylink" href="${esc(dashLink(s, b))}">查分面板里的推分记录 →</a>` : ''}</span>`;
+  }
+  // 查分面板（同一个网站）里这个谱面的推分记录。名字带上各游戏的（面板会显示这几个游戏），
+  // 谱面用历史记录里的写法：曲名、难度，maimai 加 DX / STD，音击同名曲加艺术家（见查分面板的 games.js keyOf）
+  function dashLink(s, b) {
+    const q = new URLSearchParams();
+    for (const g of Object.keys(GAMES)) { const n = g === game ? mine[g].name : acctName(g); if (n) q.set(g, n); }
+    q.set('game', game);
+    q.set('title', b.o.n);
+    q.set('diff', b.o.d);
+    if (game === 'maimai' && (s.type === 'dx' || s.type === 'std')) q.set('kind', s.type.toUpperCase());
+    const extra = game === 'ongeki' ? String(b.o.k || '').split('|')[2] : null;
+    if (extra) q.set('artist', extra);
+    return DASH_URL + '?' + q;
   }
 
   // ---- 筛选面板 ----
@@ -756,7 +771,8 @@
     const on = G.regions.filter(([k]) => s.regions?.[k]).map(([, n]) => n);
     return on.length ? on.join('、') : '已删除（现在各服都没有）';
   }
-  async function showDetail(g, id) {
+  // diff：默认打开的难度（没有这个难度时打开最高难度）
+  async function showDetail(g, id, diff) {
     await switchGame(g, false);
     if (game !== g) return; // 读取失败，或期间又切走了
     const d = data[g];
@@ -770,7 +786,8 @@
     document.title = `${s.title} - SBGA TOOL`;
     const order = Object.keys(G.diffs);
     const charts = [...s.charts].sort((a, b) => order.indexOf(a.d) - order.indexOf(b.d));
-    const pick = charts.length - 1; // 默认最高难度
+    const want = charts.findIndex((c) => c.d === diff);
+    const pick = want >= 0 ? want : charts.length - 1; // 默认最高难度
     const nt = s._nt;
     const related = d.songs.filter((x) => x !== s && x._nt === nt);
     // 种类已经写在曲名上方的标签里；音击只有日服，「收录」每首都一样，所以都不再列
@@ -843,10 +860,34 @@
       if (wasHidden && !changed) window.scrollTo(0, listScroll);
     }
   }
+  // 网址：#/游戏、#/游戏/song/条目 id（?d=难度：打开哪个难度）、
+  // #/游戏/find?title=&diff=&kind=&k=（查分面板跳过来：按历史记录里的曲名、难度找谱面）
   function route() {
-    const m = location.hash.match(/^#\/(\w+)(?:\/song\/(.+))?$/);
-    if (m && m[2]) return showDetail(m[1], decodeURIComponent(m[2]));
+    const [path, qs] = location.hash.split('?');
+    const q = new URLSearchParams(qs || '');
+    const f = path.match(/^#\/(\w+)\/find$/);
+    if (f) return findChart(f[1], q);
+    const m = path.match(/^#\/(\w+)(?:\/song\/(.+))?$/);
+    if (m && m[2]) return showDetail(m[1], decodeURIComponent(m[2]), q.get('d'));
     return switchGame(m ? m[1] : store.get('songs.game') || 'maimai');
+  }
+  // 找到了就换成这个条目的网址（替换历史，返回键直接回到查分面板）；找不到时在列表里搜这个曲名
+  async function findChart(g, q) {
+    await switchGame(g, false);
+    if (game !== g) return;
+    const title = q.get('title') || '';
+    // 中二的难度在历史记录里是数字（0〜4）
+    const o = { n: title, d: g === 'chunithm' ? Number(q.get('diff')) : q.get('diff'), kd: q.get('kind') || undefined, k: q.get('k') || undefined };
+    const hit = title && Scores.find(g, o, data[g].songs);
+    if (hit) {
+      history.replaceState(null, '', `#/${g}/song/${encodeURIComponent(hit.s.id)}?d=${hit.c.d}`);
+      return showDetail(g, hit.s.id, hit.c.d);
+    }
+    history.replaceState(null, '', `#/${g}`);
+    F.q = title;
+    renderFilters();
+    refresh();
+    await switchGame(g);
   }
 
   // ---- 主题 ----

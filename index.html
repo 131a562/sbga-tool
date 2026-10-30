@@ -66,6 +66,7 @@ h1 { font-size: 17px; margin: 0; white-space: nowrap; }
 .tab.on { background: var(--accent-soft); color: var(--accent); }
 .hdr-right { margin-left: auto; display: flex; align-items: center; gap: 8px; color: var(--faint); font-size: 12px; }
 .icon-btn { border: 1px solid var(--line); background: var(--panel); border-radius: 8px; padding: 4px 9px; cursor: pointer; color: var(--sub); }
+.nav-link { text-decoration: none; white-space: nowrap; }
 
 .filters { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 14px; margin: 16px 0; box-shadow: var(--shadow); display: grid; gap: 12px; }
 .frow { display: flex; flex-wrap: wrap; gap: 10px 18px; align-items: center; }
@@ -186,6 +187,7 @@ table.tol td.rk { font-weight: 800; }
 .mine b { font-size: 15px; font-variant-numeric: tabular-nums; }
 .myr { font-weight: 800; color: var(--accent); }
 .myr.lamp { color: var(--ok); }
+.mylink { flex-basis: 100%; font-size: 12px; color: var(--accent); }
 .nw0 { white-space: nowrap; }
 .artist.a-body { display: none; }
 .nw { white-space: nowrap; margin-right: 8px; }
@@ -277,7 +279,7 @@ footer { color: var(--faint); font-size: 12px; padding: 20px 0 40px; }
       <button class="tab" data-game="chunithm">CHUNITHM</button>
       <button class="tab" data-game="ongeki">オンゲキ</button>
     </nav>
-    <div class="hdr-right"><span id="dataTime"></span><button class="icon-btn" id="themeBtn" title="切换深色/浅色">◐</button></div>
+    <div class="hdr-right"><span id="dataTime"></span><a class="icon-btn nav-link" href="https://131a562.github.io/otoge-dashboard/" title="查分书签同步的记录：Rating 走势、出勤、推分">查分面板</a><button class="icon-btn" id="themeBtn" title="切换深色/浅色">◐</button></div>
   </div>
 </header>
 <main class="wrap">
