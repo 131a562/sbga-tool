@@ -9,6 +9,7 @@
       short: { basic: 'BAS', advanced: 'ADV', expert: 'EXP', master: 'MAS', remaster: 'ReM', utage: '宴' },
       high: ['expert', 'master', 'remaster', 'utage'],
       regions: [['jp', '日服'], ['intl', '国际服'], ['cn', '国服']],
+      alias: true, // 有中文别名（LXNS）
       kinds: [['tap', 'TAP'], ['hold', 'HOLD'], ['slide', 'SLIDE'], ['touch', 'TOUCH'], ['break', 'BREAK']],
     },
     chunithm: {
@@ -19,6 +20,7 @@
       short: { basic: 'BAS', advanced: 'ADV', expert: 'EXP', master: 'MAS', ultima: 'ULT', worldsend: 'WE' },
       high: ['expert', 'master', 'ultima', 'worldsend'],
       regions: [['jp', '日服'], ['intl', '国际服'], ['cn', '国服']],
+      alias: true,
       kinds: [['tap', 'TAP'], ['hold', 'HOLD'], ['slide', 'SLIDE'], ['air', 'AIR'], ['flick', 'FLICK']],
     },
     ongeki: {
@@ -179,6 +181,8 @@
           // 读音是连在一起写的，曲名里有空格时用读音会跨单词匹配，所以只在曲名没有空格时用
           song._wr = /\s/.test(song.title.trim()) ? [] : wordsOf(song.reading);
           song._wa = wordsOf(song.artist);
+          // 中文别名（maimai / 中二）：每个别名整个算一个词（去掉空格），不用读音、罗马音
+          song._wl = (song.alias || []).map(norm).filter(Boolean);
           song._des = [...new Set(song.charts.map((c) => c.des).filter(Boolean))];
           song._wd = song._des.flatMap(wordsOf);
           song._live = Object.values(song.regions || {}).some(Boolean);
@@ -231,6 +235,9 @@
     F._err = '';
     const re = F.q && F.mode === 'regex' ? pattern(F.q) : null;
     const nq = tokensOf(F.q);
+    // 别名只按原样（统一写法后）比，不用罗马音转出来的假名；所有关键词都要出现在同一个别名里
+    const nqa = nq.map((alts) => alts.slice(0, 1));
+    const aliasScore = (s) => (s._wl.length ? Math.max(...s._wl.map((w) => fuzzy(nqa, [w]))) * 0.9 : 0);
     const myLo = parseMy(F.myMin), myHi = parseMy(F.myMax);
     const myRange = hasMine() && (myLo != null || myHi != null);
     // 自己填的分数范围：打过、而且最佳分数在范围内（两头都包含）
@@ -263,10 +270,10 @@
         if (F.mode === 'regex') {
           if (!re) continue;
           // 读音是连在一起写的（On your mark → ONYOURMARK…），曲名里有空格时用读音会跨单词匹配，所以只用曲名
-          const fields = F.scope === 'title' ? (/\s/.test(s.title) ? [s.title] : [s.title, s.reading]) : F.scope === 'artist' ? [s.artist] : s._des;
+          const fields = F.scope === 'title' ? (/\s/.test(s.title) ? [s.title] : [s.title, s.reading]).concat(s.alias || []) : F.scope === 'artist' ? [s.artist] : s._des;
           if (!fields.some((x) => x && re.test(x.normalize('NFKC')))) continue;
         } else {
-          score = F.scope === 'title' ? Math.max(fuzzy(nq, s._wt), fuzzy(nq, s._wr) * 0.9) : F.scope === 'artist' ? fuzzy(nq, s._wa) : fuzzy(nq, s._wd);
+          score = F.scope === 'title' ? Math.max(fuzzy(nq, s._wt), fuzzy(nq, s._wr) * 0.9, aliasScore(s)) : F.scope === 'artist' ? fuzzy(nq, s._wa) : fuzzy(nq, s._wd);
           if (!score) continue;
         }
       }
@@ -407,8 +414,8 @@
   // ---- 筛选面板 ----
   // 搜索框的提示：手机上放不下长句，只写短的
   const qHint = () => (matchMedia('(max-width: 640px)').matches
-    ? (F.mode === 'regex' ? '例：ら__ら、love*song' : '曲名 / 读音')
-    : F.mode === 'regex' ? '_ = 一个非空格字符，* = 一个以上非空格字符，例如 ら__ら、love*song' : '曲名 / 读音（片假名=平假名，忽略符号；不跨单词；用空格隔开可以搜几个词）');
+    ? (F.mode === 'regex' ? '例：ら__ら、love*song' : `曲名 / 读音${GAMES[game].alias ? ' / 别名' : ''}`)
+    : F.mode === 'regex' ? '_ = 一个非空格字符，* = 一个以上非空格字符，例如 ら__ら、love*song' : `曲名 / 读音${GAMES[game].alias ? ' / 中文别名' : ''}（片假名=平假名，忽略符号；不跨单词；用空格隔开可以搜几个词）`);
   function renderFilters() {
     const G = GAMES[game], d = data[game];
     const chips = (items, sel, attr) => items.map(([v, n, full]) => `<button class="chip ${sel.includes(v) ? 'on' : ''}" data-${attr}="${esc(v)}"${full ? ` title="${esc(full)}"` : ''}>${esc(n)}</button>`).join('');
@@ -795,6 +802,7 @@
     const meta = [
       ['分类', s.cat], ...versionRows(s), ['BPM', s.bpm ?? '—'], ['实装日期', s.date],
       ...(G.regions.length > 1 ? [['收录', regionText(s)]] : []),
+      ['别名', s.alias?.join('、')],
       ...(g === 'ongeki' ? [['对手', rival], ['章节', s.chapter], ['Bonus Track', s.bonus ? '是' : null]] : []),
       ...(s.type === 'we' ? [['难度', s.kanji + '☆'.repeat(s.star || 0)]] : []),
     ].filter(([, x]) => x != null && x !== '');

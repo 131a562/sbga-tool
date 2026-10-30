@@ -9,6 +9,7 @@
 // 谱面确认页：sdvx.in — 中二 / 音击每个谱面的链接；otoge-db 和主数据都没有的谱师、物量也从这里补
 // 音击参考定数：Tachi 的谱面库 — 现行定数还没测出来的谱面，用 Re:Fresh 初期的值作参考（只在等级和现在一样时采用）；
 //   LUNATIC 里哪些是原曲的 Re:MASTER 也按 Tachi 的分类
+// 中文别名：落雪查分器（LXNS）的别名表 — maimai / 中二，只用来搜曲名和在卡片页显示
 import { readFile, writeFile, mkdir } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import { join } from 'node:path';
@@ -23,6 +24,7 @@ async function load(game, source) {
     z: `https://dp4p6x0xfi5o9.cloudfront.net/${game}/data.json`,
     o: `https://otoge-db.net/${game}/data/music-ex.json`,
     lx: `https://maimai.lxns.net/api/v0/${game}/song/list?notes=true`,
+    al: `https://maimai.lxns.net/api/v0/${game}/alias/list`,
     tc: `https://raw.githubusercontent.com/zkldi/Tachi/main/db/seeds/charts-${game}.json`,
     ts: `https://raw.githubusercontent.com/zkldi/Tachi/main/db/seeds/songs-${game}.json`,
     rw: 'https://reiwa.f5.si/ongeki_record.json',
@@ -280,6 +282,7 @@ function applyCn(game, entries, lx) {
   for (const e of entries) e.regions.cn = false; // 国服收录以 LXNS 为准
   const finder = (type) => (finders[type] ||= indexer(entries.filter((e) => e.type === type), (e) => keyOf(e)));
   const genres = new Map((lx.genres || []).map((g) => [g.genre, g.genre]));
+  const byId = new Map(); // LXNS 的曲目 id → 条目（maimai 的 STD / DX 是两个条目），对别名用
   let matched = 0, added = 0, diff = 0, cnDs = 0;
   const filled = { des: 0, notes: 0 };
   // LXNS 一首歌 → [我们的种类, 谱面列表]
@@ -319,6 +322,8 @@ function applyCn(game, entries, lx) {
         entries.push(e);
       }
       e.regions.cn = true;
+      if (!byId.has(song.id)) byId.set(song.id, []);
+      byId.get(song.id).push(e);
       e.verCn = verName(Math.min(...charts.map((c) => c.version || song.version)));
       for (const c of charts) {
         const d = type === 'utage' ? 'utage' : LX_DIFFS[game][c.difficulty];
@@ -344,7 +349,29 @@ function applyCn(game, entries, lx) {
       e.charts.sort((a, b) => order.indexOf(a.d) - order.indexOf(b.d));
     }
   }
-  return { matched, added, cnDsCharts: cnDs, dsDiffFromJp: diff, filled, versions: vers.map((v) => ({ name: v.title, version: v.version })) };
+  return { matched, added, cnDsCharts: cnDs, dsDiffFromJp: diff, filled, byId, versions: vers.map((v) => ({ name: v.title, version: v.version })) };
+}
+
+// 中文别名：按 LXNS 的曲目 id 对上条目；和曲名一样的、重复的去掉
+function applyAlias(byId, list) {
+  let songs = 0, aliases = 0;
+  for (const { song_id: id, aliases: names } of list.aliases || []) {
+    for (const e of byId.get(id) || []) {
+      const seen = new Set([norm(e.title)]);
+      const alias = [];
+      for (const a of names || []) {
+        const t = String(a ?? '').trim();
+        if (!t || seen.has(norm(t))) continue;
+        seen.add(norm(t));
+        alias.push(t);
+      }
+      if (!alias.length) continue;
+      e.alias = alias;
+      songs++;
+      aliases += alias.length;
+    }
+  }
+  return { songs, aliases };
 }
 const sumNotes = (a, b) => Object.fromEntries(Object.keys(a).map((k) => [k, (a[k] ?? 0) + (b[k] ?? 0)]));
 
@@ -673,6 +700,13 @@ for (const game of GAMES) {
   if (lx) {
     cn = applyCn(game, songs, lx);
     stats[game].cn = { matched: cn.matched, added: cn.added, cnDsCharts: cn.cnDsCharts, dsDiffFromJp: cn.dsDiffFromJp, filledFromLxns: cn.filled };
+    // 别名读不到也照样出数据，只是搜不到别名
+    try {
+      stats[game].alias = applyAlias(cn.byId, await load(game, 'al'));
+    } catch (e) {
+      console.warn(`中文别名（${game}）读取失败：${e.message}`);
+      stats[game].alias = 'failed';
+    }
   }
   if (game === 'ongeki') {
     stats[game].solo = applyOngekiSolo(songs);
