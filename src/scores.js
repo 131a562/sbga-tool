@@ -6,12 +6,14 @@
   const SITE_ORIGIN = 'https://131a562.github.io'; // 同步服务允许读取的网站
   const norm = (s) => String(s ?? '').normalize('NFKC').replace(/\s+/g, ' ').trim().toLowerCase();
 
-  // 同步名字的统一写法（和三个书签、查分面板的 cleanAccount 相同）：全角英数字转半角、英文字母转大写
-  const cleanAccount = (s) => String(s || '').normalize('NFKC').replace(/[a-z]/g, (c) => c.toUpperCase()).trim()
-    .replace(/[\\/:*?"<>|#%\u0000-\u001f]+/g, '_').replace(/\s+/g, ' ').replace(/^\.+/, '').slice(0, 40);
-  // chuni-b50 早期版本按原样保存名字（多为全角），读不到时再试一次
-  const legacyAccount = (s) => String(s || '').trim().replace(/[\\/:*?"<>|#%\u0000-\u001f]+/g, '_')
-    .replace(/\s+/g, ' ').replace(/^\.+/, '').slice(0, 40);
+  // 同步名字的统一写法（cleanAccount / legacyAccount）和读取 otoge-sync 用 SBGA DASHBOARD 的 src/common.js：
+  // 三个书签、面板和这里共用一份（同一个网站），第一次读成绩时加载
+  const COMMON_URL = SITE_ORIGIN + '/sbga-dashboard/src/common.js';
+  let common = null;
+  const loadCommon = () => common || (common = import(COMMON_URL).catch(() => {
+    common = null; // 下次再试
+    throw new Error('读不到 SBGA DASHBOARD 的 common.js（同步名字的写法和读取方法在那里）');
+  }));
 
   // 本地测试可以用 ?sync=http://localhost:xxxx 指到模拟服务（只接受 localhost，避免被别人的链接指到别的地方）
   function syncUrl() {
@@ -20,21 +22,16 @@
   }
 
   async function fetchHist(game, name) {
+    const { cleanAccount, legacyAccount, fetchHist: read } = await loadCommon();
+    const url = syncUrl();
     const tryName = async (n) => {
-      let res;
-      try { res = await fetch(`${syncUrl()}/${game}/${encodeURIComponent(n)}/raw`, { cache: 'no-store' }); }
-      catch {
+      try { return (await read(url, game, n)).hist || null; } catch (e) {
         // 同步服务只允许网站（131a562.github.io）读取：本地文件、本地预览会被浏览器拦下，看起来就像连不上
-        if (syncUrl() === SYNC_URL && location.origin !== SITE_ORIGIN) {
+        if (e.message === '连不上同步服务' && url === SYNC_URL && location.origin !== SITE_ORIGIN) {
           throw new Error(`本地打开时读不到成绩：同步服务只允许网站 ${SITE_ORIGIN} 读取，请用网址打开`);
         }
-        throw new Error('连不上同步服务');
+        throw e;
       }
-      if (res.status === 404) return null;
-      if (!res.ok) throw new Error('同步服务返回 HTTP ' + res.status);
-      const h = JSON.parse(await res.text());
-      if (!h || !Array.isArray(h.obs)) throw new Error('云端文件不是历史记录的格式');
-      return h;
     };
     const a = cleanAccount(name);
     let h = await tryName(a);
@@ -172,5 +169,5 @@
   // 各游戏的灯（从低到高，筛选「灯」用）
   const LAMPS = Object.fromEntries(Object.entries(GAME).map(([g, x]) => [g, x.lamps]));
 
-  window.Scores = { fetchHist, build, find, rank, next, fmt, fmtGap, RANKS, LAMPS, cleanAccount };
+  window.Scores = { fetchHist, build, find, rank, next, fmt, fmtGap, RANKS, LAMPS };
 })();

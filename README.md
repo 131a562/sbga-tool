@@ -53,7 +53,8 @@ maimai DX / CHUNITHM / オンゲキ 三个游戏的曲目资料（只有曲目�
 - **最佳成绩**：每个谱面取记录里分数最高的一次，灯取记录里最好的一次（和书签一样由观测记录重放得出）。
 - **对不上的**：状态栏会写有几个谱面对不上曲目数据（鼠标停在上面能看到是哪些），一般是曲名写法不同或数据库里还没有的新曲。音击的 LUNATIC 记录会先对到原曲的 Re:MASTER / LUNATIC 难度，再对到单独的 LUNATIC 条目；分不出版本的游玩（书签记成「版本未知」）不算。
 - **只能用网址打开**：同步服务只允许网站 `https://131a562.github.io` 读取，双击打开的本地文件、`localhost` 的本地预览会被浏览器拦下，状态栏会提示「本地打开时读不到成绩」。
-- 本地测试可以加 `?sync=http://localhost:端口` 指到模拟的同步服务（只接受 localhost）。
+- 本地测试可以加 `?sync=http://localhost:端口` 指到模拟的同步服务（只接受 localhost）。SBGA DASHBOARD 的 `node otoge-dashboard/test/serve.mjs` 起的 5181 允许这里的本地预览（5190）读取：`http://localhost:5190/?sync=http://localhost:5181`，名字填 `TESTER`。
+- 同步名字的统一写法（全角半角、大小写）和读取同步服务的方法不在这个仓库里：第一次读成绩时加载 SBGA DASHBOARD 的 `https://131a562.github.io/sbga-dashboard/src/common.js`（同一个网站，三个书签、SBGA DASHBOARD 和这里共用一份）。
 
 ## 卡片页
 
@@ -107,7 +108,7 @@ node scripts/build-data.mjs
 - `index.html`：页面和样式
 - `src/app.js`：读取数据、筛选、列表、卡片页
 - `src/calc.js`：容错和 Rating 计算
-- `src/scores.js`：读取成绩记录、对到每个谱面的最佳成绩、评级
+- `src/scores.js`：读取成绩记录（名字写法和读取用 SBGA DASHBOARD 的 `src/common.js`）、对到每个谱面的最佳成绩、评级
 - `scripts/build-data.mjs`：下载并整理数据
 - `scripts/serve.mjs`：本地预览服务器
 - `data/*.js`：生成的数据
