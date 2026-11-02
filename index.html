@@ -52,9 +52,13 @@ body[data-game="ongeki"] { --accent: #e0457b; --accent-soft: #fde7ef; }
 
 * { box-sizing: border-box; }
 html, body { margin: 0; }
-/* Segoe UI 放在 system-ui 前面：日文 / 中文 Windows 的 system-ui 是 Yu Gothic UI，它的粗体希腊字母坏了（ΩΩPARTS 的 Ω 显示成「ии」）。
-   英文、希腊字母用 Segoe UI，汉字和假名 Segoe UI 没有，照样落到 system-ui */
-body { background: var(--bg); color: var(--text); font: 14px/1.5 -apple-system, "Segoe UI", system-ui, "Hiragino Sans", "Microsoft YaHei", "Yu Gothic UI", sans-serif; }
+/* 日文 / 中文 Windows 的 system-ui 是 Yu Gothic UI，它的粗体 Ω 字形坏了（ΩΩPARTS 显示成「ии」）。
+   只有希腊字母（unicode-range）改用 Segoe UI，其他字照旧用 system-ui，粗细和风格不变。
+   没有 Segoe UI 的系统（iPhone、Mac、安卓）这几条找不到字体，自动跳过 */
+@font-face { font-family: "Greek Fix"; src: local("Segoe UI"); font-weight: 400; unicode-range: U+0370-03FF, U+1F00-1FFF; }
+@font-face { font-family: "Greek Fix"; src: local("Segoe UI Semibold"); font-weight: 600; unicode-range: U+0370-03FF, U+1F00-1FFF; }
+@font-face { font-family: "Greek Fix"; src: local("Segoe UI Bold"); font-weight: 700; unicode-range: U+0370-03FF, U+1F00-1FFF; }
+body { background: var(--bg); color: var(--text); font: 14px/1.5 "Greek Fix", system-ui, -apple-system, "Segoe UI", "Hiragino Sans", "Microsoft YaHei", "Yu Gothic UI", sans-serif; }
 a { color: var(--accent); }
 button, input, select { font: inherit; color: inherit; }
 .wrap { max-width: 1280px; margin: 0 auto; padding: 0 16px; }
