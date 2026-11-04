@@ -94,6 +94,7 @@ node scripts/build-data.mjs
 
 - 主数据：[arcade-songs](https://arcade-songs.zetaraku.dev/)（zetaraku）— 曲目列表、每个谱面的版本、定数、谱师、物量、收录地区
 - 补充：[otoge-db](https://otoge-db.net/)（zvuc）— 宴谱 / WORLD'S END / LUNATIC 的物量和谱师、各种类物量、读音、wiki 链接、音击角色等。按「曲名 + 艺术家」（再不行按曲名）对上
+- 音击的新曲：arcade-songs 的音击数据有时停更（正常是每周五更新一次，2026-10-16 之后连着几周没更新），otoge-db 当天就有新曲。所以 otoge-db 有、arcade-songs 还没有的音击曲目会单独加成条目，曲名、等级、定数、物量、谱师、对手、版本都用 otoge-db 的（otoge-db 的版本分得更细，arcade-songs 的版本表里没有时归到大版本，例如 `bright MEMORY Act.3` → `bright MEMORY`），曲绘用 otoge-db 的图（它还没传图时显示占位图）。只加 arcade-songs 最后一次更新那天及以后加入的曲目，老歌两边写法不同对不上时不会多出重复的条目。数据每次都从头生成，arcade-songs 收录以后自然改用它的数据；条目 id 按 arcade-songs 的规则（曲名，LUNATIC 单独条目是 `(LUN) 曲名`），卡片页的网址不变
 - 国服：[落雪查分器](https://maimai.lxns.net/)（LXNS）— maimai / 中二的国服收录、国服定数、国服版本；日服数据源缺的谱师和物量也用它补（主要是 WORLD'S END）。定数和水鱼查分器的一致（2026-10-21 对比过：中二全部一致，maimai 只有宴谱的写法不同）。国服有、日服数据里没有的曲目会单独加成条目（曲绘用落雪的）。中文别名也来自落雪的别名表（`/api/v0/{game}/alias/list`），按落雪的曲目 id 对上条目；读不到时照样出数据，只是没有别名
 - 音击参考定数：[Tachi](https://github.com/zkldi/Tachi) 的谱面库（`db/seeds/charts-ongeki.json`）。Re:Fresh Act.2 又改过一次定数，Tachi 的值是之前的，所以只用来补现行定数还没测出来的谱面，而且只在 Tachi 的等级和现在的官方等级一样时才用；卡片页标「参考，未确认」，列表上显示 `~10.7`；LUNATIC 里哪些是原曲的 Re:MASTER 也按 Tachi 的分类
 - 谱面确认页：[sdvx.in](https://sdvx.in/)（中二 / 音击）— 每个谱面的「谱面确认」链接；新谱面 otoge-db 还没有的谱师、物量也从这里补。中二读 sdvx.in 整理好的曲目 JSON（谱面页是 `viewer.php?id=…&diff=…`，旧的 `ult/` `end/` 地址已经失效）；音击读 `sort/0〜15.htm` 的曲目列表，只下载 otoge-db 没给链接的那些曲目的 `xxxxxsort.js`（同时最多 4 个请求）。sdvx.in 没做图的难度（等级前带 `_`、或者写成 `<href=…>`）不加链接。只存链接和文字，不存谱面图片。sdvx.in 读不到时照样出数据，只用 otoge-db 的链接

@@ -3,7 +3,8 @@
 //   node scripts/build-data.mjs <目录>     用目录里已下载的 z_<游戏>.json / <游戏>.json / lx_<游戏>.json（离线调试用）
 //
 // 主数据：arcade-songs-db（zetaraku）— 曲目列表、每个谱面的版本、定数（日服，maimai 另有国际服不同的值）、谱师、物量
-// 补充：otoge-db（zvuc）— 宴谱 / WORLD'S END / LUNATIC 的物量和谱师、各种类物量、wiki 链接、音击角色
+// 补充：otoge-db（zvuc）— 宴谱 / WORLD'S END / LUNATIC 的物量和谱师、各种类物量、wiki 链接、音击角色；
+//   音击主数据停更时，otoge-db 有、主数据还没有的新曲也从这里加
 // 国服：落雪查分器（LXNS）— maimai / 中二的国服收录、国服定数、国服版本（和水鱼查分器的定数一致）
 // 书签用的定数文件：data/feed/ 下，格式和 otoge-db / reiwa.f5.si（音击书签原来的定数表）一样，定数换成这里的值
 // 谱面确认页：sdvx.in — 中二 / 音击每个谱面的链接；otoge-db 和主数据都没有的谱师、物量也从这里补
@@ -248,20 +249,75 @@ function buildOngeki(z, odb) {
     if (!o) miss++;
     const e = baseEntry('ongeki', z, song, o);
     e.type = type;
-    if (o) {
-      e.chara = str(o.character) || undefined;
-      e.element = str(o.enemy_type) || undefined;
-      e.enemyLv = num(o.enemy_lv) ?? undefined;
-      e.bonus = o.bonus === '1' || undefined;
-      e.chapter = str(o.chapter) || undefined;
-    }
-    const map = { basic: 'bas', advanced: 'adv', expert: 'exc', master: 'mas', lunatic: 'lnt' };
-    e.charts = song.sheets.map((s) => mergeChart(s, oChart(o, map[s.difficulty])));
+    if (o) ongekiExtra(e, o);
+    e.charts = song.sheets.map((s) => mergeChart(s, oChart(o, ONGEKI_ODB[s.difficulty])));
     e.regions = regionsOf(song.sheets);
     out.push(e);
   }
-  stats.ongeki = { entries: out.length, unmatched: miss };
+  const fromOdb = addOngekiFromOdb(out, z, odb, oChart);
+  stats.ongeki = { entries: out.length, unmatched: miss, fromOtogeDb: fromOdb };
   return out;
+}
+
+const ONGEKI_ODB = { basic: 'bas', advanced: 'adv', expert: 'exc', master: 'mas', lunatic: 'lnt' }; // 难度 → otoge-db 的字段前缀
+// 音击的对手、章节等只有 otoge-db 有
+function ongekiExtra(e, o) {
+  e.chara = str(o.character) || undefined;
+  e.element = str(o.enemy_type) || undefined;
+  e.enemyLv = num(o.enemy_lv) ?? undefined;
+  e.bonus = o.bonus === '1' || undefined;
+  e.chapter = str(o.chapter) || undefined;
+}
+
+// 主数据（zetaraku）的音击有时停更好几周，otoge-db 当天就有新曲：
+// otoge-db 有、zetaraku 还没有的曲目单独加成条目。只加 zetaraku 最后一次更新那天及以后加入的，
+// 老歌两边写法不同对不上时不会多出重复的条目。每次都从头生成，zetaraku 收录后自然改用它的数据；
+// id 按 zetaraku 的规则（曲名，LUNATIC 单独条目是「(LUN) 曲名」），网址不变
+function addOngekiFromOdb(entries, z, odb, oChart) {
+  const since = String(z.updateTime || '').slice(0, 10).replace(/-/g, '');
+  const inStd = indexer(z.songs.filter((s) => s.sheets[0].type !== 'lun'));
+  const lun = z.songs.filter((s) => s.sheets[0].type === 'lun');
+  const inLun = (o) => lun.some((s) => norm(s.title) === norm(o.title) && norm(s.artist) === norm(o.artist) && s.sheets[0].level === o.lev_lnt);
+  // otoge-db 的版本分得更细（bright MEMORY Act.3），zetaraku 的版本表里没有时归到大版本（bright MEMORY）
+  const vers = z.versions.map((v) => v.version);
+  const verOf = (v) => (vers.includes(v) ? v : vers.filter((x) => v?.startsWith(x)).sort((a, b) => b.length - a.length)[0] || str(v));
+  const ids = new Set(entries.map((e) => e.id));
+  const added = [];
+  for (const o of odb) {
+    if (!since || !o.date_added || o.date_added < since) continue;
+    const isLun = o.lunatic === '1';
+    if (isLun ? inLun(o) : inStd(o.title, o.artist)) continue;
+    const id = isLun ? `(LUN) ${o.title}` : o.title;
+    if (ids.has(id)) continue; // 不知道 zetaraku 会怎么起名，和已有条目撞 id 的不加，免得网址冲突
+    const e = {
+      id,
+      title: o.title,
+      artist: o.artist,
+      cat: str(o.category),
+      ver: verOf(o.version),
+      bpm: num(o.bpm),
+      date: ymd(o.date_added),
+      img: null,
+      imgUrl: o.image_url ? `https://otoge-db.net/ongeki/jacket/${o.image_url}` : undefined,
+      reading: o.title_sort || undefined,
+      wiki: o.wikiwiki_url || undefined,
+      isNew: o.new === 'NEW' || undefined,
+      type: isLun ? 'lun' : 'std',
+    };
+    ongekiExtra(e, o);
+    e.charts = [];
+    for (const [d, p] of Object.entries(ONGEKI_ODB)) {
+      if (isLun !== (d === 'lunatic') || !o[`lev_${p}`]) continue;
+      const c = oChart(o, p);
+      e.charts.push({ d, lv: o[`lev_${p}`], ds: c.ds, des: c.des, notes: c.notes, link: c.link || undefined });
+    }
+    if (!e.charts.length) continue;
+    e.regions = { jp: true };
+    entries.push(e);
+    ids.add(id);
+    added.push(id);
+  }
+  return added;
 }
 
 // ---- 国服（LXNS）----

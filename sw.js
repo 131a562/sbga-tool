@@ -20,7 +20,7 @@ const FILES = [
   'icons/apple-touch-icon.png',
   'icons/favicon.png',
 ];
-const COVER_HOSTS = ['dp4p6x0xfi5o9.cloudfront.net', 'assets2.lxns.net'];
+const COVER_HOSTS = ['dp4p6x0xfi5o9.cloudfront.net', 'assets2.lxns.net', 'otoge-db.net'];
 
 self.addEventListener('install', (e) => {
   // cache: 'reload'：安装时直接从服务器取，不用浏览器缓存的旧文件
