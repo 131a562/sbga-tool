@@ -850,6 +850,20 @@
     return `<div class="aliases${more ? '' : ' open'}"><span class="al-k">别名</span><div class="al-list">${list.map((a, i) => `<span class="al${i >= ALIAS_SHOW ? ' x' : ''}">${esc(a)}</span>`).join('')}${more ? `<button type="button" class="al-more">全部 ${list.length} 个</button>` : ''}</div></div>`;
   }
 
+  // 页头的两个日期：本站更新 = 我们最近一次重新生成数据（每天早上自动），数据源更新 = arcade-songs（曲目主数据）最后一次更新。
+  // 按浏览器的时区显示；不是今年的才写年份
+  function showDataTime(d) {
+    const fmt = (iso) => {
+      const t = new Date(iso);
+      if (!iso || isNaN(t)) return '—';
+      const p = (n) => String(n).padStart(2, '0');
+      return `${t.getFullYear() !== new Date().getFullYear() ? t.getFullYear() + '-' : ''}${p(t.getMonth() + 1)}-${p(t.getDate())}`;
+    };
+    const el = $('#dataTime');
+    el.innerHTML = `<span>本站更新 ${fmt(d.generated)}</span><span>数据源更新 ${fmt(d.sourceTime)}</span>`;
+    el.title = '本站更新：SBGA TOOL 最近一次从各数据源重新生成数据的日期（每天早上自动）\n数据源更新：曲目主数据 arcade-songs 自己最后一次更新的日期';
+  }
+
   // ---- 切换游戏 / 路由 ----
   let switching = 0;
   async function switchGame(g, showList = true) {
@@ -869,7 +883,7 @@
       F = loadFilter(g);
       renderFilters();
       const d = data[g];
-      $('#dataTime').textContent = `数据 ${d.sourceTime ? d.sourceTime.slice(0, 10) : d.generated.slice(0, 10)}`;
+      showDataTime(d);
       refresh();
       if (!mine[g] && acctName(g)) loadScores(g, acctName(g));
     }
